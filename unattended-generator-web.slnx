@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Library/">
+    <Project Path="Library/UnattendGenerator/UnattendGenerator.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path="compose.yaml" />
+  </Folder>
+  <Project Path="unattended-generator-web.csproj" />
+</Solution>

@@ -1,0 +1,3 @@
+[submodule "Library/UnattendGenerator"]
+	path = Library/UnattendGenerator
+	url = https://github.com/cschneegans/unattend-generator.git

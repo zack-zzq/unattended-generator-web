@@ -1,0 +1,7 @@
+﻿services:
+  unattended-generator-web:
+    image: unattended-generator-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+
