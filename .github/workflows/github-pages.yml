@@ -30,8 +30,14 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Install wasm-tools workload
+        run: dotnet workload install wasm-tools
+
+      - name: Restore dependencies
+        run: dotnet restore unattended-generator-web.csproj
+
       - name: Publish
-        run: dotnet publish -c Release -o release
+        run: dotnet publish unattended-generator-web.csproj -c Release -f net9.0 -o release
 
       # 更新base href以匹配GitHub Pages路径
       - name: Update base href
