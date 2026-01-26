@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Windows 无人值守安装应答文件生成器 - 轻松创建 autounattend.xml" />
+    <title>Windows 无人值守安装生成器</title>
+    <base href="/" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="unattended-generator-web.styles.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+</head>
+
+<body>
+    <div id="app">
+        <div
+            style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #0f172a; color: #f1f5f9;">
+            <div style="text-align: center;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚙️</div>
+                <div style="font-size: 1.25rem; margin-bottom: 0.5rem;">正在加载...</div>
+                <div style="font-size: 0.875rem; color: #64748b;">Windows 无人值守安装生成器</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" data-nosnippet>
+        发生了未处理的错误。
+        <a href="." class="reload">重新加载</a>
+        <span class="dismiss">🗙</span>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>
+        function downloadFile(filename, base64Content) {
+            const link = document.createElement('a');
+            link.href = 'data:application/xml;base64,' + base64Content;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+
+</html>

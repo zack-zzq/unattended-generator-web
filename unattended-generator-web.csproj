@@ -1,23 +1,28 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
-
-    <ItemGroup>
-      <ProjectReference Include="Library\UnattendGenerator\UnattendGenerator.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <!-- Exclude Library source files as they're compiled by the referenced project -->
-      <Compile Remove="Library\**\*.cs" />
-      <Content Remove="Library\**" />
-      <None Remove="Library\**" />
-    </ItemGroup>
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <RootNamespace>unattended-generator-web</RootNamespace>
-        <AssemblyName>$(AssemblyName.Replace(' ', '_'))</AssemblyName>
+        <RootNamespace>unattended_generator_web</RootNamespace>
+        <AssemblyName>unattended-generator-web</AssemblyName>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="9.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="9.0.0" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="Library\UnattendGenerator\UnattendGenerator.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Exclude Library source files as they're compiled by the referenced project -->
+        <Compile Remove="Library\**\*.cs" />
+        <Content Remove="Library\**" />
+        <None Remove="Library\**" />
+    </ItemGroup>
 
 </Project>
