@@ -7,6 +7,9 @@
         <RootNamespace>unattended_generator_web</RootNamespace>
         <AssemblyName>unattended-generator-web</AssemblyName>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <!-- 禁用裁剪以保留Newtonsoft.Json反序列化所需的类型 -->
+        <PublishTrimmed>false</PublishTrimmed>
+        <TrimMode>partial</TrimMode>
     </PropertyGroup>
 
     <ItemGroup>
@@ -23,6 +26,11 @@
         <Compile Remove="Library\**\*.cs" />
         <Content Remove="Library\**" />
         <None Remove="Library\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- 链接器配置 -->
+        <TrimmerRootDescriptor Include="LinkerConfig.xml" />
     </ItemGroup>
 
 </Project>

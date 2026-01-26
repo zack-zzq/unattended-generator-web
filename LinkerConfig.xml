@@ -1,0 +1,18 @@
+<linker>
+  <!-- 保留System.Collections.Immutable类型以支持Newtonsoft.Json反序列化 -->
+  <assembly fullname="System.Collections.Immutable">
+    <type fullname="System.Collections.Immutable.ImmutableSortedSet`1" preserve="all" />
+    <type fullname="System.Collections.Immutable.ImmutableArray`1" preserve="all" />
+    <type fullname="System.Collections.Immutable.ImmutableList`1" preserve="all" />
+    <type fullname="System.Collections.Immutable.ImmutableDictionary`2" preserve="all" />
+    <type fullname="System.Collections.Immutable.ImmutableHashSet`1" preserve="all" />
+  </assembly>
+  
+  <!-- 保留UnattendGenerator程序集中的所有类型 -->
+  <assembly fullname="UnattendGenerator" preserve="all" />
+  
+  <!-- 保留Newtonsoft.Json反序列化所需的类型 -->
+  <assembly fullname="Newtonsoft.Json">
+    <type fullname="Newtonsoft.Json.*" preserve="all" />
+  </assembly>
+</linker>
