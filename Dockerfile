@@ -7,9 +7,18 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# 先复制所有项目文件以便恢复依赖
 COPY ["unattended-generator-web.csproj", "./"]
+COPY ["Library/UnattendGenerator/UnattendGenerator.csproj", "Library/UnattendGenerator/"]
+
+# 恢复依赖
 RUN dotnet restore "unattended-generator-web.csproj"
+
+# 复制所有源代码
 COPY . .
+
+# 构建项目
 WORKDIR "/src/"
 RUN dotnet build "./unattended-generator-web.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
