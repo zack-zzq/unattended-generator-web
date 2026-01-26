@@ -1,10 +1,14 @@
 using unattended_generator_web.Components;
+using unattended_generator_web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// 注册配置服务（Scoped，每个用户会话一个实例）
+builder.Services.AddScoped<ConfigurationService>();
 
 var app = builder.Build();
 

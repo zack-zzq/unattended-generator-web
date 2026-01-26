@@ -1,7 +1,154 @@
 ﻿@page "/"
+@using unattended_generator_web.Services
+@inject ConfigurationService Config
 
-<PageTitle>Home</PageTitle>
+<PageTitle>配置概览 - Windows 无人值守安装生成器</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="animate-fade-in">
+    <div class="mb-3">
+        <h1>配置概览</h1>
+        <p>快速配置您的 Windows 无人值守安装选项，生成 autounattend.xml 文件。</p>
+    </div>
 
-Welcome to your new app.
+    <div class="alert alert-info">
+        <span>💡</span>
+        <span>从左侧菜单选择配置选项，或点击下方快速入口开始配置。</span>
+    </div>
+
+    <!-- 快速配置区域 -->
+    <div class="option-grid">
+        <a href="generator/edition" class="option-item">
+            <div class="list-item-icon">💿</div>
+            <div class="list-item-text">
+                <div class="list-item-title">Windows 版本</div>
+                <div class="list-item-subtitle">选择要安装的 Windows 版本</div>
+            </div>
+        </a>
+        <a href="generator/locale" class="option-item">
+            <div class="list-item-icon">🌐</div>
+            <div class="list-item-text">
+                <div class="list-item-title">区域和语言</div>
+                <div class="list-item-subtitle">设置系统语言和键盘布局</div>
+            </div>
+        </a>
+        <a href="generator/account" class="option-item">
+            <div class="list-item-icon">👤</div>
+            <div class="list-item-text">
+                <div class="list-item-title">用户账户</div>
+                <div class="list-item-subtitle">配置本地管理员账户</div>
+            </div>
+        </a>
+        <a href="generator/disk" class="option-item">
+            <div class="list-item-icon">💾</div>
+            <div class="list-item-text">
+                <div class="list-item-title">磁盘分区</div>
+                <div class="list-item-subtitle">配置磁盘分区方案</div>
+            </div>
+        </a>
+        <a href="generator/optimization" class="option-item">
+            <div class="list-item-icon">⚡</div>
+            <div class="list-item-text">
+                <div class="list-item-title">系统优化</div>
+                <div class="list-item-subtitle">禁用遥测、优化性能</div>
+            </div>
+        </a>
+        <a href="generator/bloatware" class="option-item">
+            <div class="list-item-icon">🗑️</div>
+            <div class="list-item-text">
+                <div class="list-item-title">预装软件删除</div>
+                <div class="list-item-subtitle">移除 Windows 预装应用</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- 当前配置摘要 -->
+    <Card Title="当前配置摘要" Icon="📋" class="mt-3">
+        <div class="list">
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>Windows 版本</span>
+                </div>
+                <span class="badge">@GetEditionDisplay()</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>语言设置</span>
+                </div>
+                <span class="badge">@GetLanguageDisplay()</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>账户模式</span>
+                </div>
+                <span class="badge">@GetAccountDisplay()</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>磁盘分区</span>
+                </div>
+                <span class="badge">@GetPartitionDisplay()</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>已选择删除的预装软件</span>
+                </div>
+                <span class="badge">@Config.SelectedBloatwares.Count 项</span>
+            </div>
+        </div>
+    </Card>
+
+    <!-- 生成按钮 -->
+    <div class="d-flex justify-center gap-2 mt-3">
+        <a href="generator/preview" class="btn btn-secondary btn-lg">
+            <span>👁️</span>
+            预览配置
+        </a>
+        <a href="generator/download" class="btn btn-primary btn-lg">
+            <span>📥</span>
+            生成并下载 XML
+        </a>
+    </div>
+</div>
+
+@code {
+    private string GetEditionDisplay()
+    {
+        return Config.EditionSettings switch
+        {
+            Schneegans.Unattend.UnattendedEditionSettings s => s.Edition.DisplayName,
+            Schneegans.Unattend.CustomEditionSettings s => "自定义密钥",
+            Schneegans.Unattend.FirmwareEditionSettings => "从固件读取",
+            _ => "交互式选择"
+        };
+    }
+
+    private string GetLanguageDisplay()
+    {
+        return Config.LanguageSettings switch
+        {
+            Schneegans.Unattend.UnattendedLanguageSettings s => s.ImageLanguage.DisplayName,
+            _ => "交互式选择"
+        };
+    }
+
+    private string GetAccountDisplay()
+    {
+        return Config.AccountSettings switch
+        {
+            Schneegans.Unattend.UnattendedAccountSettings s => $"{s.Accounts.Count} 个账户",
+            Schneegans.Unattend.InteractiveMicrosoftAccountSettings => "Microsoft 账户",
+            Schneegans.Unattend.InteractiveLocalAccountSettings => "本地账户（交互式）",
+            _ => "未配置"
+        };
+    }
+
+    private string GetPartitionDisplay()
+    {
+        return Config.PartitionSettings switch
+        {
+            Schneegans.Unattend.UnattendedPartitionSettings s => $"{s.PartitionLayout} 自动分区",
+            Schneegans.Unattend.CustomPartitionSettings => "自定义脚本",
+            _ => "交互式选择"
+        };
+    }
+}

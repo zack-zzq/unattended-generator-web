@@ -1,0 +1,212 @@
+@page "/generator/locale"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>区域和语言 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>区域和语言</h2>
+    <p>配置 Windows 安装的界面语言、区域设置和键盘布局。</p>
+
+    <Card Title="语言配置模式" Icon="🌐">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(isInteractive ? "active" : "")" 
+                        @onclick="() => SetInteractiveMode(true)">
+                    交互式选择
+                </button>
+                <button class="tab @(!isInteractive ? "active" : "")" 
+                        @onclick="() => SetInteractiveMode(false)">
+                    预设语言
+                </button>
+            </div>
+        </div>
+
+        @if (isInteractive)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Windows 安装程序将显示语言选择界面，用户可以手动选择语言和区域。</span>
+            </div>
+        }
+        else
+        {
+            <div class="form-group">
+                <label class="form-label">系统界面语言</label>
+                <select class="form-control" @bind="selectedImageLanguage" @bind:after="UpdateSettings">
+                    @foreach (var lang in Config.AvailableImageLanguages.Values.OrderBy(l => l.DisplayName))
+                    {
+                        <option value="@lang.Id">@lang.DisplayName (@lang.Id)</option>
+                    }
+                </select>
+                <div class="form-hint">选择 Windows 界面显示语言</div>
+            </div>
+
+            <hr />
+
+            <h4>主要区域设置</h4>
+            <div class="form-group">
+                <label class="form-label">用户区域设置</label>
+                <select class="form-control" @bind="selectedLocale" @bind:after="UpdateSettings">
+                    @foreach (var locale in Config.AvailableUserLocales.Values.OrderBy(l => l.DisplayName))
+                    {
+                        <option value="@locale.Id">@locale.DisplayName (@locale.Id)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">键盘布局</label>
+                <select class="form-control" @bind="selectedKeyboard" @bind:after="UpdateSettings">
+                    @foreach (var kb in Config.AvailableKeyboards.Values.OrderBy(k => k.DisplayName))
+                    {
+                        <option value="@kb.Id">@kb.DisplayName</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">地理位置</label>
+                <select class="form-control" @bind="selectedGeoId" @bind:after="UpdateSettings">
+                    @foreach (var geo in Config.AvailableGeoLocations.Values.OrderBy(g => g.DisplayName))
+                    {
+                        <option value="@geo.Id">@geo.DisplayName</option>
+                    }
+                </select>
+                <div class="form-hint">用于确定日期格式、货币等区域设置</div>
+            </div>
+
+            <hr />
+
+            <Toggle Title="添加第二键盘布局"
+                    Description="允许添加额外的键盘布局"
+                    @bind-Value="showSecondKeyboard" />
+
+            @if (showSecondKeyboard)
+            {
+                <div class="form-group mt-2">
+                    <label class="form-label">第二区域设置</label>
+                    <select class="form-control" @bind="selectedLocale2" @bind:after="UpdateSettings">
+                        <option value="">-- 不使用 --</option>
+                        @foreach (var locale in Config.AvailableUserLocales.Values.OrderBy(l => l.DisplayName))
+                        {
+                            <option value="@locale.Id">@locale.DisplayName (@locale.Id)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">第二键盘布局</label>
+                    <select class="form-control" @bind="selectedKeyboard2" @bind:after="UpdateSettings">
+                        @foreach (var kb in Config.AvailableKeyboards.Values.OrderBy(k => k.DisplayName))
+                        {
+                            <option value="@kb.Id">@kb.DisplayName</option>
+                        }
+                    </select>
+                </div>
+            }
+        }
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/edition" class="btn btn-secondary">
+            <span>←</span> Windows 版本
+        </a>
+        <a href="generator/timezone" class="btn btn-primary">
+            时区设置 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private bool isInteractive = true;
+    private string selectedImageLanguage = "zh-CN";
+    private string selectedLocale = "zh-CN";
+    private string selectedKeyboard = "0804:00000804";
+    private string selectedGeoId = "45"; // China
+    private bool showSecondKeyboard = false;
+    private string selectedLocale2 = "";
+    private string selectedKeyboard2 = "";
+
+    protected override void OnInitialized()
+    {
+        if (Config.LanguageSettings is UnattendedLanguageSettings settings)
+        {
+            isInteractive = false;
+            selectedImageLanguage = settings.ImageLanguage.Id;
+            selectedLocale = settings.LocaleAndKeyboard.Locale.Id;
+            selectedKeyboard = settings.LocaleAndKeyboard.Keyboard.Id;
+            selectedGeoId = settings.GeoLocation.Id;
+
+            if (settings.LocaleAndKeyboard2 != null)
+            {
+                showSecondKeyboard = true;
+                selectedLocale2 = settings.LocaleAndKeyboard2.Locale.Id;
+                selectedKeyboard2 = settings.LocaleAndKeyboard2.Keyboard.Id;
+            }
+        }
+        else
+        {
+            isInteractive = true;
+        }
+
+        // 设置默认值
+        if (Config.AvailableImageLanguages.ContainsKey("zh-CN"))
+            selectedImageLanguage = "zh-CN";
+        else if (Config.AvailableImageLanguages.Any())
+            selectedImageLanguage = Config.AvailableImageLanguages.Keys.First();
+    }
+
+    private void SetInteractiveMode(bool interactive)
+    {
+        isInteractive = interactive;
+        UpdateSettings();
+    }
+
+    private void UpdateSettings()
+    {
+        if (isInteractive)
+        {
+            Config.LanguageSettings = new InteractiveLanguageSettings();
+            return;
+        }
+
+        try
+        {
+            var imageLanguage = Config.AvailableImageLanguages.GetValueOrDefault(selectedImageLanguage) 
+                ?? Config.AvailableImageLanguages.Values.First();
+            
+            var locale = Config.AvailableUserLocales.GetValueOrDefault(selectedLocale)
+                ?? Config.AvailableUserLocales.Values.First();
+            
+            var keyboard = Config.AvailableKeyboards.GetValueOrDefault(selectedKeyboard)
+                ?? Config.AvailableKeyboards.Values.First();
+            
+            var geoLocation = Config.AvailableGeoLocations.GetValueOrDefault(selectedGeoId)
+                ?? Config.AvailableGeoLocations.Values.First();
+
+            LocaleAndKeyboard? localeAndKeyboard2 = null;
+            if (showSecondKeyboard && !string.IsNullOrEmpty(selectedLocale2))
+            {
+                var locale2 = Config.AvailableUserLocales.GetValueOrDefault(selectedLocale2);
+                var keyboard2 = Config.AvailableKeyboards.GetValueOrDefault(selectedKeyboard2);
+                if (locale2 != null && keyboard2 != null)
+                {
+                    localeAndKeyboard2 = new LocaleAndKeyboard(locale2, keyboard2);
+                }
+            }
+
+            Config.LanguageSettings = new UnattendedLanguageSettings(
+                ImageLanguage: imageLanguage,
+                LocaleAndKeyboard: new LocaleAndKeyboard(locale, keyboard),
+                LocaleAndKeyboard2: localeAndKeyboard2,
+                LocaleAndKeyboard3: null,
+                GeoLocation: geoLocation
+            );
+        }
+        catch
+        {
+            Config.LanguageSettings = new InteractiveLanguageSettings();
+        }
+    }
+}

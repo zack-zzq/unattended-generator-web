@@ -1,0 +1,185 @@
+@page "/generator/wifi"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>Wi-Fi 配置 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>Wi-Fi 配置</h2>
+    <p>配置 Windows 安装时的无线网络连接。</p>
+
+    <Card Title="Wi-Fi 设置模式" Icon="📶">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(wifiMode == WifiMode.Skip ? "active" : "")" 
+                        @onclick="() => SetWifiMode(WifiMode.Skip)">
+                    跳过 Wi-Fi
+                </button>
+                <button class="tab @(wifiMode == WifiMode.Interactive ? "active" : "")" 
+                        @onclick="() => SetWifiMode(WifiMode.Interactive)">
+                    交互式选择
+                </button>
+                <button class="tab @(wifiMode == WifiMode.Preset ? "active" : "")" 
+                        @onclick="() => SetWifiMode(WifiMode.Preset)">
+                    预设网络
+                </button>
+                <button class="tab @(wifiMode == WifiMode.Xml ? "active" : "")" 
+                        @onclick="() => SetWifiMode(WifiMode.Xml)">
+                    自定义 XML
+                </button>
+            </div>
+        </div>
+
+        @if (wifiMode == WifiMode.Skip)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>将跳过 Wi-Fi 配置步骤。如果需要网络连接，请使用有线网络。</span>
+            </div>
+        }
+        else if (wifiMode == WifiMode.Interactive)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Windows 将在 OOBE 阶段显示 Wi-Fi 网络选择界面。</span>
+            </div>
+        }
+        else if (wifiMode == WifiMode.Preset)
+        {
+            <TextField Label="网络名称 (SSID)"
+                       Placeholder="MyWiFiNetwork"
+                       HelpText="输入要连接的 Wi-Fi 网络名称"
+                       @bind-Value="ssid" />
+
+            <div class="form-group">
+                <label class="form-label">认证方式</label>
+                <div class="tabs">
+                    <button class="tab @(authentication == WifiAuthentications.Open ? "active" : "")"
+                            @onclick="() => { authentication = WifiAuthentications.Open; UpdateSettings(); }">
+                        开放网络
+                    </button>
+                    <button class="tab @(authentication == WifiAuthentications.WPA2PSK ? "active" : "")"
+                            @onclick="() => { authentication = WifiAuthentications.WPA2PSK; UpdateSettings(); }">
+                        WPA2-PSK
+                    </button>
+                    <button class="tab @(authentication == WifiAuthentications.WPA3SAE ? "active" : "")"
+                            @onclick="() => { authentication = WifiAuthentications.WPA3SAE; UpdateSettings(); }">
+                        WPA3-SAE
+                    </button>
+                </div>
+            </div>
+
+            @if (authentication != WifiAuthentications.Open)
+            {
+                <TextField Label="密码"
+                           InputType="password"
+                           Placeholder="输入 Wi-Fi 密码"
+                           HelpText="Wi-Fi 网络密码"
+                           @bind-Value="password" />
+            }
+
+            <Toggle Title="自动连接"
+                    Description="在范围内时自动连接到此网络"
+                    @bind-Value="connectAutomatically" />
+
+            <Toggle Title="隐藏网络"
+                    Description="此网络不广播 SSID"
+                    @bind-Value="nonBroadcast" />
+        }
+        else if (wifiMode == WifiMode.Xml)
+        {
+            <div class="alert alert-info">
+                <span>💡</span>
+                <span>可以通过运行 <code>netsh wlan export profile</code> 命令导出现有的 Wi-Fi 配置文件。</span>
+            </div>
+
+            <TextField Label="WLAN 配置文件 XML"
+                       Multiline="true"
+                       Rows="12"
+                       Placeholder="<?xml version='1.0'?>
+<WLANProfile xmlns='http://www.microsoft.com/networking/WLAN/profile/v1'>
+    ...
+</WLANProfile>"
+                       HelpText="完整的 WLAN 配置文件 XML"
+                       @bind-Value="wlanXml" />
+        }
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/bloatware" class="btn btn-secondary">
+            <span>←</span> 预装软件删除
+        </a>
+        <a href="generator/security" class="btn btn-primary">
+            安全设置 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private enum WifiMode { Skip, Interactive, Preset, Xml }
+
+    private WifiMode wifiMode = WifiMode.Skip;
+    private string ssid = "";
+    private string password = "";
+    private WifiAuthentications authentication = WifiAuthentications.WPA2PSK;
+    private bool connectAutomatically = true;
+    private bool nonBroadcast = false;
+    private string wlanXml = "";
+
+    protected override void OnInitialized()
+    {
+        switch (Config.WifiSettings)
+        {
+            case SkipWifiSettings:
+                wifiMode = WifiMode.Skip;
+                break;
+            case InteractiveWifiSettings:
+                wifiMode = WifiMode.Interactive;
+                break;
+            case ParameterizedWifiSettings pws:
+                wifiMode = WifiMode.Preset;
+                ssid = pws.Name;
+                password = pws.Password;
+                authentication = pws.Authentication;
+                connectAutomatically = pws.ConnectAutomatically;
+                nonBroadcast = pws.NonBroadcast;
+                break;
+            case XmlWifiSettings xws:
+                wifiMode = WifiMode.Xml;
+                // XmlWifiSettings stores parsed XML, we'd need to serialize it back
+                break;
+        }
+    }
+
+    private void SetWifiMode(WifiMode mode)
+    {
+        wifiMode = mode;
+        UpdateSettings();
+    }
+
+    private void UpdateSettings()
+    {
+        try
+        {
+            Config.WifiSettings = wifiMode switch
+            {
+                WifiMode.Skip => new SkipWifiSettings(),
+                WifiMode.Interactive => new InteractiveWifiSettings(),
+                WifiMode.Preset when !string.IsNullOrEmpty(ssid) => new ParameterizedWifiSettings(
+                    Name: ssid,
+                    Password: password,
+                    ConnectAutomatically: connectAutomatically,
+                    Authentication: authentication,
+                    NonBroadcast: nonBroadcast
+                ),
+                WifiMode.Xml when !string.IsNullOrEmpty(wlanXml) => new XmlWifiSettings(wlanXml),
+                _ => new SkipWifiSettings()
+            };
+        }
+        catch (ConfigurationException)
+        {
+            // XML 格式错误时保持跳过模式
+            Config.WifiSettings = new SkipWifiSettings();
+        }
+    }
+}

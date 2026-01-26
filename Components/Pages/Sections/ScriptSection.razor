@@ -1,0 +1,276 @@
+@page "/generator/script"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>自定义脚本 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>自定义脚本</h2>
+    <p>添加在 Windows 安装过程不同阶段执行的自定义脚本。</p>
+
+    <div class="alert alert-info">
+        <span>💡</span>
+        <div>
+            <strong>脚本执行阶段说明：</strong>
+            <ul class="mt-1 mb-0" style="padding-left: 1.5rem;">
+                <li><strong>系统阶段</strong> - 在系统上下文中运行，用户账户创建之前</li>
+                <li><strong>首次登录</strong> - 第一个用户首次登录时运行</li>
+                <li><strong>用户首次登录</strong> - 每个用户首次登录时运行</li>
+                <li><strong>默认用户配置</strong> - 修改默认用户注册表配置（仅支持 .reg/.cmd/.ps1）</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 脚本列表 -->
+    <Card Title="已添加的脚本" Icon="📜">
+        @if (scripts.Count == 0)
+        {
+            <div class="text-center text-muted p-3">
+                <p>暂无自定义脚本</p>
+                <p>点击下方按钮添加脚本</p>
+            </div>
+        }
+        else
+        {
+            <div class="list">
+                @foreach (var (script, index) in scripts.Select((s, i) => (s, i)))
+                {
+                    <div class="list-item">
+                        <div class="list-item-content">
+                            <div class="list-item-icon">@GetScriptIcon(script.Type)</div>
+                            <div class="list-item-text">
+                                <div class="list-item-title">脚本 @(index + 1) - @GetScriptTypeDisplay(script.Type)</div>
+                                <div class="list-item-subtitle">
+                                    @GetPhaseDisplay(script.Phase) | @script.Content.Length 字符
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-item-actions">
+                            <button class="btn btn-ghost btn-sm" @onclick="() => EditScript(index)">✏️</button>
+                            <button class="btn btn-ghost btn-sm" @onclick="() => RemoveScript(index)">🗑️</button>
+                            @if (index > 0)
+                            {
+                                <button class="btn btn-ghost btn-sm" @onclick="() => MoveUp(index)">⬆️</button>
+                            }
+                            @if (index < scripts.Count - 1)
+                            {
+                                <button class="btn btn-ghost btn-sm" @onclick="() => MoveDown(index)">⬇️</button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </Card>
+
+    <!-- 添加/编辑脚本表单 -->
+    <Card Title="@(editingIndex >= 0 ? "编辑脚本" : "添加新脚本")" Icon="➕">
+        <div class="form-group">
+            <label class="form-label">执行阶段</label>
+            <div class="tabs">
+                <button class="tab @(newPhase == ScriptPhase.System ? "active" : "")"
+                        @onclick="() => SetPhase(ScriptPhase.System)">
+                    系统阶段
+                </button>
+                <button class="tab @(newPhase == ScriptPhase.FirstLogon ? "active" : "")"
+                        @onclick="() => SetPhase(ScriptPhase.FirstLogon)">
+                    首次登录
+                </button>
+                <button class="tab @(newPhase == ScriptPhase.UserOnce ? "active" : "")"
+                        @onclick="() => SetPhase(ScriptPhase.UserOnce)">
+                    用户首次登录
+                </button>
+                <button class="tab @(newPhase == ScriptPhase.DefaultUser ? "active" : "")"
+                        @onclick="() => SetPhase(ScriptPhase.DefaultUser)">
+                    默认用户配置
+                </button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">脚本类型</label>
+            <div class="tabs">
+                @foreach (var type in newPhase.GetAllowedTypes())
+                {
+                    <button class="tab @(newType == type ? "active" : "")"
+                            @onclick="() => newType = type">
+                        @GetScriptTypeDisplay(type)
+                    </button>
+                }
+            </div>
+        </div>
+
+        <TextField Label="脚本内容"
+                   Multiline="true"
+                   Rows="10"
+                   Placeholder="@GetPlaceholder(newType)"
+                   @bind-Value="newContent" />
+
+        <div class="btn-group">
+            <button class="btn btn-primary" @onclick="SaveScript" disabled="@string.IsNullOrWhiteSpace(newContent)">
+                @(editingIndex >= 0 ? "保存更改" : "添加脚本")
+            </button>
+            @if (editingIndex >= 0)
+            {
+                <button class="btn btn-secondary" @onclick="CancelEdit">取消</button>
+            }
+        </div>
+    </Card>
+
+    <!-- 高级选项 -->
+    <Card Title="高级选项" Icon="⚙️" Collapsed="true">
+        <Toggle Title="重启资源管理器"
+                Description="在用户脚本执行后重启资源管理器进程以应用更改"
+                @bind-Value="restartExplorer" />
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/security" class="btn btn-secondary">
+            <span>←</span> 安全设置
+        </a>
+        <a href="generator/advanced" class="btn btn-primary">
+            高级选项 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private List<Script> scripts = new();
+    private bool restartExplorer = false;
+
+    // 编辑状态
+    private int editingIndex = -1;
+    private ScriptPhase newPhase = ScriptPhase.System;
+    private ScriptType newType = ScriptType.Ps1;
+    private string newContent = "";
+
+    protected override void OnInitialized()
+    {
+        scripts = Config.ScriptSettings.Scripts.ToList();
+        restartExplorer = Config.ScriptSettings.RestartExplorer;
+    }
+
+    private void SetPhase(ScriptPhase phase)
+    {
+        newPhase = phase;
+        // 确保选择的类型在允许范围内
+        if (!phase.GetAllowedTypes().Contains(newType))
+        {
+            newType = phase.GetAllowedTypes().First();
+        }
+    }
+
+    private void SaveScript()
+    {
+        try
+        {
+            var script = new Script(newContent, newPhase, newType);
+            
+            if (editingIndex >= 0)
+            {
+                scripts[editingIndex] = script;
+            }
+            else
+            {
+                scripts.Add(script);
+            }
+            
+            UpdateSettings();
+            ClearForm();
+        }
+        catch (ConfigurationException)
+        {
+            // 脚本配置错误
+        }
+    }
+
+    private void EditScript(int index)
+    {
+        editingIndex = index;
+        var script = scripts[index];
+        newPhase = script.Phase;
+        newType = script.Type;
+        newContent = script.Content;
+    }
+
+    private void RemoveScript(int index)
+    {
+        scripts.RemoveAt(index);
+        UpdateSettings();
+    }
+
+    private void MoveUp(int index)
+    {
+        if (index > 0)
+        {
+            (scripts[index], scripts[index - 1]) = (scripts[index - 1], scripts[index]);
+            UpdateSettings();
+        }
+    }
+
+    private void MoveDown(int index)
+    {
+        if (index < scripts.Count - 1)
+        {
+            (scripts[index], scripts[index + 1]) = (scripts[index + 1], scripts[index]);
+            UpdateSettings();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        ClearForm();
+    }
+
+    private void ClearForm()
+    {
+        editingIndex = -1;
+        newPhase = ScriptPhase.System;
+        newType = ScriptType.Ps1;
+        newContent = "";
+    }
+
+    private void UpdateSettings()
+    {
+        Config.ScriptSettings = new ScriptSettings(scripts.ToImmutableList(), restartExplorer);
+    }
+
+    private string GetScriptIcon(ScriptType type) => type switch
+    {
+        ScriptType.Ps1 => "📘",
+        ScriptType.Cmd => "📗",
+        ScriptType.Reg => "📙",
+        ScriptType.Vbs => "📕",
+        ScriptType.Js => "📒",
+        _ => "📄"
+    };
+
+    private string GetScriptTypeDisplay(ScriptType type) => type switch
+    {
+        ScriptType.Ps1 => "PowerShell (.ps1)",
+        ScriptType.Cmd => "批处理 (.cmd)",
+        ScriptType.Reg => "注册表 (.reg)",
+        ScriptType.Vbs => "VBScript (.vbs)",
+        ScriptType.Js => "JScript (.js)",
+        _ => type.ToString()
+    };
+
+    private string GetPhaseDisplay(ScriptPhase phase) => phase switch
+    {
+        ScriptPhase.System => "系统阶段",
+        ScriptPhase.FirstLogon => "首次登录",
+        ScriptPhase.UserOnce => "用户首次登录",
+        ScriptPhase.DefaultUser => "默认用户配置",
+        _ => phase.ToString()
+    };
+
+    private string GetPlaceholder(ScriptType type) => type switch
+    {
+        ScriptType.Ps1 => "# PowerShell 脚本\nWrite-Host \"Hello World\"",
+        ScriptType.Cmd => "@echo off\necho Hello World",
+        ScriptType.Reg => "Windows Registry Editor Version 5.00\n\n[HKEY_CURRENT_USER\\Software\\Example]\n\"Value\"=\"Data\"",
+        ScriptType.Vbs => "WScript.Echo \"Hello World\"",
+        ScriptType.Js => "WScript.Echo(\"Hello World\");",
+        _ => ""
+    };
+}

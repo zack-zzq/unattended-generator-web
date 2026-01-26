@@ -1,0 +1,130 @@
+@page "/generator/timezone"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>时区设置 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>时区设置</h2>
+    <p>配置 Windows 系统的时区设置。</p>
+
+    <Card Title="时区配置" Icon="🕐">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(isImplicit ? "active" : "")" 
+                        @onclick="() => SetImplicitMode(true)">
+                    自动检测
+                </button>
+                <button class="tab @(!isImplicit ? "active" : "")" 
+                        @onclick="() => SetImplicitMode(false)">
+                    指定时区
+                </button>
+            </div>
+        </div>
+
+        @if (isImplicit)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Windows 将根据地理位置和语言设置自动选择时区。</span>
+            </div>
+        }
+        else
+        {
+            <div class="form-group">
+                <label class="form-label">选择时区</label>
+                <select class="form-control" @bind="selectedTimeZone" @bind:after="UpdateSettings">
+                    @foreach (var tz in Config.AvailableTimeZones.Values.OrderBy(t => t.DisplayName))
+                    {
+                        <option value="@tz.Id">@tz.DisplayName</option>
+                    }
+                </select>
+                <div class="form-hint">选择目标计算机所在的时区</div>
+            </div>
+
+            <!-- 常用时区快捷选择 -->
+            <div class="mt-2">
+                <label class="form-label">常用时区</label>
+                <div class="btn-group flex-wrap">
+                    @foreach (var tz in commonTimeZones)
+                    {
+                        <button class="btn btn-sm @(selectedTimeZone == tz.Id ? "btn-primary" : "btn-secondary")"
+                                @onclick="@(() => SelectTimeZone(tz.Id))">
+                            @tz.Label
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/locale" class="btn btn-secondary">
+            <span>←</span> 区域和语言
+        </a>
+        <a href="generator/disk" class="btn btn-primary">
+            磁盘分区 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private bool isImplicit = true;
+    private string selectedTimeZone = "China Standard Time";
+
+    private static readonly (string Id, string Label)[] commonTimeZones =
+    [
+        ("China Standard Time", "中国标准时间 (UTC+8)"),
+        ("Taipei Standard Time", "台北标准时间 (UTC+8)"),
+        ("Tokyo Standard Time", "东京标准时间 (UTC+9)"),
+        ("Korea Standard Time", "韩国标准时间 (UTC+9)"),
+        ("Singapore Standard Time", "新加坡标准时间 (UTC+8)"),
+        ("Pacific Standard Time", "太平洋时间 (UTC-8)"),
+        ("GMT Standard Time", "格林威治时间 (UTC+0)")
+    ];
+
+    protected override void OnInitialized()
+    {
+        if (Config.TimeZoneSettings is ExplicitTimeZoneSettings settings)
+        {
+            isImplicit = false;
+            selectedTimeZone = settings.TimeZone.Id;
+        }
+        else
+        {
+            isImplicit = true;
+        }
+    }
+
+    private void SetImplicitMode(bool implicit_)
+    {
+        isImplicit = implicit_;
+        UpdateSettings();
+    }
+
+    private void SelectTimeZone(string tzId)
+    {
+        selectedTimeZone = tzId;
+        UpdateSettings();
+    }
+
+    private void UpdateSettings()
+    {
+        if (isImplicit)
+        {
+            Config.TimeZoneSettings = new ImplicitTimeZoneSettings();
+            return;
+        }
+
+        var tz = Config.AvailableTimeZones.GetValueOrDefault(selectedTimeZone);
+        if (tz != null)
+        {
+            Config.TimeZoneSettings = new ExplicitTimeZoneSettings(tz);
+        }
+        else
+        {
+            Config.TimeZoneSettings = new ImplicitTimeZoneSettings();
+        }
+    }
+}
+

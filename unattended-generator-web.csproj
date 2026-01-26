@@ -4,6 +4,13 @@
       <ProjectReference Include="Library\UnattendGenerator\UnattendGenerator.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <!-- Exclude Library source files as they're compiled by the referenced project -->
+      <Compile Remove="Library\**\*.cs" />
+      <Content Remove="Library\**" />
+      <None Remove="Library\**" />
+    </ItemGroup>
+
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>

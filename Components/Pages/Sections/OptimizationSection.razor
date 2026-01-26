@@ -1,0 +1,217 @@
+@page "/generator/optimization"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>系统优化 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>系统优化</h2>
+    <p>配置 Windows 系统优化选项，禁用不需要的功能以提升性能和隐私。</p>
+
+    <Card Title="隐私设置" Icon="🔒">
+        <Toggle Title="禁用 Windows 更新自动重启"
+                Description="防止系统在更新后自动重启"
+                Value="@Config.PreventAutomaticReboot"
+                ValueChanged="v => { Config.PreventAutomaticReboot = v; }" />
+        
+        <Toggle Title="禁用应用建议"
+                Description="关闭开始菜单和锁屏界面的应用推广"
+                Value="@Config.DisableAppSuggestions"
+                ValueChanged="v => { Config.DisableAppSuggestions = v; }" />
+
+        <Toggle Title="禁用 Bing 搜索结果"
+                Description="在开始菜单搜索中禁用 Bing 网页搜索"
+                Value="@Config.DisableBingResults"
+                ValueChanged="v => { Config.DisableBingResults = v; }" />
+        
+        <Toggle Title="禁用小组件"
+                Description="禁用 Windows 11 的小组件功能"
+                Value="@Config.DisableWidgets"
+                ValueChanged="v => { Config.DisableWidgets = v; }" />
+    </Card>
+
+    <Card Title="性能优化" Icon="⚡">
+        <Toggle Title="禁用快速启动"
+                Description="关闭混合休眠，可解决某些双系统问题"
+                Value="@Config.DisableFastStartup"
+                ValueChanged="v => { Config.DisableFastStartup = v; }" />
+        
+        <Toggle Title="禁用系统还原"
+                Description="关闭系统还原点功能以节省磁盘空间"
+                Value="@Config.DisableSystemRestore"
+                ValueChanged="v => { Config.DisableSystemRestore = v; }" />
+
+        <Toggle Title="禁用最后访问时间"
+                Description="禁用文件最后访问时间更新，提升 SSD 性能"
+                Value="@Config.DisableLastAccess"
+                ValueChanged="v => { Config.DisableLastAccess = v; }" />
+        
+        <Toggle Title="禁用鼠标指针精确度"
+                Description="关闭鼠标加速，适合游戏玩家"
+                Value="@Config.DisablePointerPrecision"
+                ValueChanged="v => { Config.DisablePointerPrecision = v; }" />
+    </Card>
+
+    <Card Title="界面设置" Icon="🎨">
+        <Toggle Title="显示文件扩展名"
+                Description="在资源管理器中显示已知文件类型的扩展名"
+                Value="@Config.ShowFileExtensions"
+                ValueChanged="v => { Config.ShowFileExtensions = v; }" />
+        
+        <Toggle Title="显示隐藏文件"
+                Description="在资源管理器中显示隐藏文件和系统文件"
+                Value="@(Config.HideFiles == HideModes.None)"
+                ValueChanged="v => { Config.HideFiles = v ? HideModes.None : HideModes.Hidden; }" />
+
+        <Toggle Title="显示所有托盘图标"
+                Description="在系统托盘区域显示所有图标"
+                Value="@Config.ShowAllTrayIcons"
+                ValueChanged="v => { Config.ShowAllTrayIcons = v; }" />
+        
+        <Toggle Title="隐藏任务视图按钮"
+                Description="隐藏任务栏上的任务视图按钮"
+                Value="@Config.HideTaskViewButton"
+                ValueChanged="v => { Config.HideTaskViewButton = v; }" />
+
+        <Toggle Title="任务栏左对齐 (Win11)"
+                Description="将 Windows 11 任务栏图标对齐到左侧"
+                Value="@Config.LeftTaskbar"
+                ValueChanged="v => { Config.LeftTaskbar = v; }" />
+
+        <Toggle Title="经典右键菜单"
+                Description="使用 Windows 10 风格的右键菜单"
+                Value="@Config.ClassicContextMenu"
+                ValueChanged="v => { Config.ClassicContextMenu = v; }" />
+
+        <Toggle Title="资源管理器打开到此电脑"
+                Description="资源管理器默认打开'此电脑'而非'快速访问'"
+                Value="@Config.LaunchToThisPC"
+                ValueChanged="v => { Config.LaunchToThisPC = v; }" />
+
+        <Toggle Title="显示结束任务按钮"
+                Description="在任务栏右键菜单中显示'结束任务'选项"
+                Value="@Config.ShowEndTask"
+                ValueChanged="v => { Config.ShowEndTask = v; }" />
+    </Card>
+
+    <Card Title="搜索栏模式" Icon="🔍">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(Config.TaskbarSearch == TaskbarSearchMode.Box ? "active" : "")"
+                        @onclick="() => Config.TaskbarSearch = TaskbarSearchMode.Box">
+                    搜索框
+                </button>
+                <button class="tab @(Config.TaskbarSearch == TaskbarSearchMode.Icon ? "active" : "")"
+                        @onclick="() => Config.TaskbarSearch = TaskbarSearchMode.Icon">
+                    仅图标
+                </button>
+                <button class="tab @(Config.TaskbarSearch == TaskbarSearchMode.Label ? "active" : "")"
+                        @onclick="() => Config.TaskbarSearch = TaskbarSearchMode.Label">
+                    搜索标签
+                </button>
+                <button class="tab @(Config.TaskbarSearch == TaskbarSearchMode.Hide ? "active" : "")"
+                        @onclick="() => Config.TaskbarSearch = TaskbarSearchMode.Hide">
+                    隐藏
+                </button>
+            </div>
+        </div>
+    </Card>
+
+    <Card Title="声音设置" Icon="🔊">
+        <Toggle Title="关闭系统声音"
+                Description="禁用所有 Windows 系统提示音"
+                Value="@Config.TurnOffSystemSounds"
+                ValueChanged="v => { Config.TurnOffSystemSounds = v; }" />
+    </Card>
+
+    <Card Title="Edge 浏览器" Icon="🌐">
+        <Toggle Title="隐藏 Edge 首次运行体验"
+                Description="跳过 Edge 浏览器的首次运行设置向导"
+                Value="@Config.HideEdgeFre"
+                ValueChanged="v => { Config.HideEdgeFre = v; }" />
+        
+        <Toggle Title="禁用 Edge 启动加速"
+                Description="禁用 Edge 的后台预加载和启动加速"
+                Value="@Config.DisableEdgeStartupBoost"
+                ValueChanged="v => { Config.DisableEdgeStartupBoost = v; }" />
+
+        <Toggle Title="使 Edge 可卸载"
+                Description="修改注册表使 Edge 浏览器可以被卸载"
+                Value="@Config.MakeEdgeUninstallable"
+                ValueChanged="v => { Config.MakeEdgeUninstallable = v; }" />
+
+        <Toggle Title="删除 Edge 桌面快捷方式"
+                Description="删除 Edge 在桌面上创建的快捷方式"
+                Value="@Config.DeleteEdgeDesktopIcon"
+                ValueChanged="v => { Config.DeleteEdgeDesktopIcon = v; }" />
+    </Card>
+
+    <Card Title="其他选项" Icon="🔧">
+        <Toggle Title="启用长路径支持"
+                Description="允许超过 260 字符的文件路径"
+                Value="@Config.EnableLongPaths"
+                ValueChanged="v => { Config.EnableLongPaths = v; }" />
+        
+        <Toggle Title="启用远程桌面"
+                Description="允许远程桌面连接到此计算机"
+                Value="@Config.EnableRemoteDesktop"
+                ValueChanged="v => { Config.EnableRemoteDesktop = v; }" />
+
+        <Toggle Title="允许 PowerShell 脚本"
+                Description="将执行策略设置为 RemoteSigned"
+                Value="@Config.AllowPowerShellScripts"
+                ValueChanged="v => { Config.AllowPowerShellScripts = v; }" />
+        
+        <Toggle Title="阻止 BitLocker 设备加密"
+                Description="阻止 Windows 自动加密系统驱动器"
+                Value="@Config.PreventDeviceEncryption"
+                ValueChanged="v => { Config.PreventDeviceEncryption = v; }" />
+
+        <Toggle Title="删除 Windows.old"
+                Description="首次登录时删除旧版 Windows 文件夹"
+                Value="@Config.DeleteWindowsOld"
+                ValueChanged="v => { Config.DeleteWindowsOld = v; }" />
+
+        <Toggle Title="删除符号链接"
+                Description="删除用户目录中的旧版符号链接"
+                Value="@Config.DeleteJunctions"
+                ValueChanged="v => { Config.DeleteJunctions = v; }" />
+    </Card>
+
+    <Card Title="虚拟机工具" Icon="💻" Collapsed="true">
+        <p class="text-muted">自动安装虚拟机增强工具（从安装介质中）</p>
+        
+        <Toggle Title="VirtualBox Guest Additions"
+                Description="自动安装 VirtualBox 增强功能"
+                Value="@Config.VBoxGuestAdditions"
+                ValueChanged="v => { Config.VBoxGuestAdditions = v; }" />
+        
+        <Toggle Title="VMware Tools"
+                Description="自动安装 VMware 虚拟机工具"
+                Value="@Config.VMwareTools"
+                ValueChanged="v => { Config.VMwareTools = v; }" />
+
+        <Toggle Title="VirtIO Guest Tools"
+                Description="自动安装 QEMU/KVM VirtIO 驱动"
+                Value="@Config.VirtIoGuestTools"
+                ValueChanged="v => { Config.VirtIoGuestTools = v; }" />
+        
+        <Toggle Title="Parallels Tools"
+                Description="自动安装 Parallels Desktop 工具"
+                Value="@Config.ParallelsTools"
+                ValueChanged="v => { Config.ParallelsTools = v; }" />
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/personalization" class="btn btn-secondary">
+            <span>←</span> 外观设置
+        </a>
+        <a href="generator/bloatware" class="btn btn-primary">
+            预装软件删除 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    // 此页面主要使用直接绑定到 Config 属性，无需额外状态管理
+}

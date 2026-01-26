@@ -1,0 +1,244 @@
+@page "/generator/edition"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>Windows 版本 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>Windows 版本</h2>
+    <p>选择要自动安装的 Windows 版本，或使用自定义产品密钥。</p>
+
+    <Card Title="版本选择模式" Icon="💿">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(editionMode == EditionMode.Interactive ? "active" : "")" 
+                        @onclick="() => SetEditionMode(EditionMode.Interactive)">
+                    交互式选择
+                </button>
+                <button class="tab @(editionMode == EditionMode.Firmware ? "active" : "")" 
+                        @onclick="() => SetEditionMode(EditionMode.Firmware)">
+                    从固件读取
+                </button>
+                <button class="tab @(editionMode == EditionMode.Preset ? "active" : "")" 
+                        @onclick="() => SetEditionMode(EditionMode.Preset)">
+                    预设版本
+                </button>
+                <button class="tab @(editionMode == EditionMode.Custom ? "active" : "")" 
+                        @onclick="() => SetEditionMode(EditionMode.Custom)">
+                    自定义密钥
+                </button>
+            </div>
+        </div>
+
+        @if (editionMode == EditionMode.Interactive)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Windows 安装程序将显示版本选择界面，用户可以手动选择要安装的版本。</span>
+            </div>
+        }
+        else if (editionMode == EditionMode.Firmware)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>将从计算机固件（BIOS/UEFI）中读取预装的 Windows 产品密钥，自动选择对应版本。</span>
+            </div>
+        }
+        else if (editionMode == EditionMode.Preset)
+        {
+            <div class="form-group">
+                <label class="form-label">选择 Windows 版本</label>
+                <div class="option-grid">
+                    @foreach (var edition in Config.AvailableEditions.Where(e => e.Visible))
+                    {
+                        <div class="option-item @(selectedEditionId == edition.Id ? "selected" : "")"
+                             @onclick="() => SelectEdition(edition)">
+                            <input type="radio" 
+                                   class="form-check-input" 
+                                   checked="@(selectedEditionId == edition.Id)" />
+                            <div class="list-item-text">
+                                <div class="list-item-title">@edition.DisplayName</div>
+                                <div class="list-item-subtitle">@edition.ProductKey</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else if (editionMode == EditionMode.Custom)
+        {
+            <TextField Label="产品密钥"
+                       Placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
+                       HelpText="输入有效的 Windows 产品密钥，格式：5组5字符，用连字符分隔"
+                       @bind-Value="customProductKey"
+                       ErrorMessage="@productKeyError" />
+            
+            <button class="btn btn-secondary mt-2" @onclick="ValidateProductKey">
+                验证密钥格式
+            </button>
+        }
+    </Card>
+
+    <Card Title="源镜像选择" Icon="📀">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(installFromMode == InstallFromMode.Automatic ? "active" : "")" 
+                        @onclick="() => SetInstallFromMode(InstallFromMode.Automatic)">
+                    自动检测
+                </button>
+                <button class="tab @(installFromMode == InstallFromMode.Index ? "active" : "")" 
+                        @onclick="() => SetInstallFromMode(InstallFromMode.Index)">
+                    按索引指定
+                </button>
+                <button class="tab @(installFromMode == InstallFromMode.Name ? "active" : "")" 
+                        @onclick="() => SetInstallFromMode(InstallFromMode.Name)">
+                    按名称指定
+                </button>
+            </div>
+        </div>
+
+        @if (installFromMode == InstallFromMode.Automatic)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>自动从安装镜像中选择与产品密钥匹配的版本。</span>
+            </div>
+        }
+        else if (installFromMode == InstallFromMode.Index)
+        {
+            <NumberField Label="镜像索引"
+                         HelpText="指定 install.wim 中的镜像索引号（通常从 1 开始）"
+                         @bind-Value="imageIndex"
+                         Min="1"
+                         Max="10" />
+        }
+        else if (installFromMode == InstallFromMode.Name)
+        {
+            <TextField Label="镜像名称"
+                       Placeholder="Windows 11 Pro"
+                       HelpText="输入 install.wim 中的镜像完整名称"
+                       @bind-Value="imageName" />
+        }
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="/" class="btn btn-secondary">
+            <span>←</span> 返回概览
+        </a>
+        <a href="generator/locale" class="btn btn-primary">
+            区域和语言 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private enum EditionMode { Interactive, Firmware, Preset, Custom }
+    private enum InstallFromMode { Automatic, Index, Name }
+
+    private EditionMode editionMode = EditionMode.Interactive;
+    private InstallFromMode installFromMode = InstallFromMode.Automatic;
+    private string selectedEditionId = "";
+    private string customProductKey = "";
+    private string productKeyError = "";
+    private int imageIndex = 1;
+    private string imageName = "";
+
+    protected override void OnInitialized()
+    {
+        // 从服务中恢复状态
+        switch (Config.EditionSettings)
+        {
+            case InteractiveEditionSettings:
+                editionMode = EditionMode.Interactive;
+                break;
+            case FirmwareEditionSettings:
+                editionMode = EditionMode.Firmware;
+                break;
+            case UnattendedEditionSettings s:
+                editionMode = EditionMode.Preset;
+                selectedEditionId = s.Edition.Id;
+                break;
+            case CustomEditionSettings s:
+                editionMode = EditionMode.Custom;
+                customProductKey = s.ProductKey;
+                break;
+        }
+
+        switch (Config.InstallFromSettings)
+        {
+            case AutomaticInstallFromSettings:
+                installFromMode = InstallFromMode.Automatic;
+                break;
+            case IndexInstallFromSettings s:
+                installFromMode = InstallFromMode.Index;
+                imageIndex = s.Index;
+                break;
+            case NameInstallFromSettings s:
+                installFromMode = InstallFromMode.Name;
+                imageName = s.Name;
+                break;
+        }
+    }
+
+    private void SetEditionMode(EditionMode mode)
+    {
+        editionMode = mode;
+        UpdateEditionSettings();
+    }
+
+    private void SelectEdition(WindowsEdition edition)
+    {
+        selectedEditionId = edition.Id;
+        UpdateEditionSettings();
+    }
+
+    private void UpdateEditionSettings()
+    {
+        Config.EditionSettings = editionMode switch
+        {
+            EditionMode.Interactive => new InteractiveEditionSettings(),
+            EditionMode.Firmware => new FirmwareEditionSettings(),
+            EditionMode.Preset when !string.IsNullOrEmpty(selectedEditionId) => 
+                new UnattendedEditionSettings(Config.AvailableEditions.First(e => e.Id == selectedEditionId)),
+            EditionMode.Custom when !string.IsNullOrEmpty(customProductKey) => 
+                TryCreateCustomEdition(customProductKey),
+            _ => new InteractiveEditionSettings()
+        };
+    }
+
+    private IEditionSettings TryCreateCustomEdition(string key)
+    {
+        try
+        {
+            productKeyError = "";
+            return new CustomEditionSettings(key.ToUpperInvariant());
+        }
+        catch (ConfigurationException ex)
+        {
+            productKeyError = ex.Message;
+            return new InteractiveEditionSettings();
+        }
+    }
+
+    private void ValidateProductKey()
+    {
+        UpdateEditionSettings();
+    }
+
+    private void SetInstallFromMode(InstallFromMode mode)
+    {
+        installFromMode = mode;
+        UpdateInstallFromSettings();
+    }
+
+    private void UpdateInstallFromSettings()
+    {
+        Config.InstallFromSettings = installFromMode switch
+        {
+            InstallFromMode.Automatic => new AutomaticInstallFromSettings(),
+            InstallFromMode.Index => new IndexInstallFromSettings(imageIndex),
+            InstallFromMode.Name when !string.IsNullOrEmpty(imageName) => new NameInstallFromSettings(imageName),
+            _ => new AutomaticInstallFromSettings()
+        };
+    }
+}

@@ -1,0 +1,328 @@
+@page "/generator/account"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>用户账户 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>用户账户</h2>
+    <p>配置 Windows 系统的用户账户和自动登录设置。</p>
+
+    <Card Title="账户模式" Icon="👤">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(accountMode == AccountMode.InteractiveLocal ? "active" : "")" 
+                        @onclick="() => SetAccountMode(AccountMode.InteractiveLocal)">
+                    本地账户（交互式）
+                </button>
+                <button class="tab @(accountMode == AccountMode.InteractiveMicrosoft ? "active" : "")" 
+                        @onclick="() => SetAccountMode(AccountMode.InteractiveMicrosoft)">
+                    Microsoft 账户
+                </button>
+                <button class="tab @(accountMode == AccountMode.Unattended ? "active" : "")" 
+                        @onclick="() => SetAccountMode(AccountMode.Unattended)">
+                    自动创建账户
+                </button>
+            </div>
+        </div>
+
+        @if (accountMode == AccountMode.InteractiveLocal)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Windows 将在 OOBE 阶段提示创建本地账户，并跳过 Microsoft 账户登录。</span>
+            </div>
+        }
+        else if (accountMode == AccountMode.InteractiveMicrosoft)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Windows 将在 OOBE 阶段提示使用 Microsoft 账户登录。</span>
+            </div>
+        }
+        else if (accountMode == AccountMode.Unattended)
+        {
+            <div class="alert alert-warning">
+                <span>⚠️</span>
+                <span>密码将以明文形式存储在 autounattend.xml 中。请确保安全处理此文件。</span>
+            </div>
+
+            <!-- 账户列表 -->
+            <div class="list mb-2">
+                @foreach (var account in accounts)
+                {
+                    <div class="list-item">
+                        <div class="list-item-content">
+                            <div class="list-item-icon">@(account.Group == Constants.AdministratorsGroup ? "👑" : "👤")</div>
+                            <div class="list-item-text">
+                                <div class="list-item-title">@account.Name</div>
+                                <div class="list-item-subtitle">
+                                    @(account.Group == Constants.AdministratorsGroup ? "管理员" : "标准用户")
+                                    @if (!string.IsNullOrEmpty(account.DisplayName) && account.DisplayName != account.Name)
+                                    {
+                                        <span> | 显示名称: @account.DisplayName</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-item-actions">
+                            <button class="btn btn-ghost btn-sm" @onclick="() => EditAccount(account)">✏️</button>
+                            <button class="btn btn-ghost btn-sm" @onclick="() => RemoveAccount(account)">🗑️</button>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (accounts.Count == 0)
+            {
+                <div class="alert alert-warning">
+                    <span>⚠️</span>
+                    <span>至少需要添加一个管理员账户！</span>
+                </div>
+            }
+
+            <!-- 添加账户表单 -->
+            <div class="card" style="background: var(--bg-tertiary); border: 1px dashed var(--border-color);">
+                <div class="card-body">
+                    <h4 class="mt-0">@(editingAccount != null ? "编辑账户" : "添加新账户")</h4>
+                    
+                    <div class="input-group">
+                        <div style="flex: 1;">
+                            <TextField Label="用户名"
+                                       Placeholder="admin"
+                                       HelpText="最多20个字符"
+                                       @bind-Value="newUsername"
+                                       ErrorMessage="@usernameError" />
+                        </div>
+                        <div style="flex: 1;">
+                            <TextField Label="显示名称"
+                                       Placeholder="Administrator"
+                                       HelpText="可选，在登录界面显示"
+                                       @bind-Value="newDisplayName" />
+                        </div>
+                    </div>
+
+                    <TextField Label="密码"
+                               InputType="password"
+                               Placeholder="输入密码"
+                               @bind-Value="newPassword" />
+
+                    <div class="form-group">
+                        <label class="form-label">账户类型</label>
+                        <div class="tabs" style="max-width: 300px;">
+                            <button class="tab @(isAdmin ? "active" : "")"
+                                    @onclick="() => isAdmin = true">
+                                管理员
+                            </button>
+                            <button class="tab @(!isAdmin ? "active" : "")"
+                                    @onclick="() => isAdmin = false">
+                                标准用户
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn btn-primary" @onclick="SaveAccount">
+                            @(editingAccount != null ? "保存更改" : "添加账户")
+                        </button>
+                        @if (editingAccount != null)
+                        {
+                            <button class="btn btn-secondary" @onclick="CancelEdit">取消</button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <hr />
+
+            <!-- 自动登录设置 -->
+            <h4>自动登录</h4>
+            <div class="form-group">
+                <div class="tabs" style="max-width: 400px;">
+                    <button class="tab @(autoLogonMode == AutoLogonMode.None ? "active" : "")"
+                            @onclick="() => SetAutoLogonMode(AutoLogonMode.None)">
+                        禁用
+                    </button>
+                    <button class="tab @(autoLogonMode == AutoLogonMode.Own ? "active" : "")"
+                            @onclick="() => SetAutoLogonMode(AutoLogonMode.Own)">
+                        首个管理员
+                    </button>
+                    <button class="tab @(autoLogonMode == AutoLogonMode.Builtin ? "active" : "")"
+                            @onclick="() => SetAutoLogonMode(AutoLogonMode.Builtin)">
+                        内置管理员
+                    </button>
+                </div>
+            </div>
+
+            @if (autoLogonMode == AutoLogonMode.Builtin)
+            {
+                <TextField Label="内置管理员密码"
+                           InputType="password"
+                           Placeholder="输入密码"
+                           HelpText="为内置 Administrator 账户设置密码"
+                           @bind-Value="builtinAdminPassword" />
+            }
+
+            <Toggle Title="混淆密码"
+                    Description="在 XML 中使用 Base64 编码密码（仅混淆，非加密）"
+                    @bind-Value="obscurePasswords" />
+        }
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/disk" class="btn btn-secondary">
+            <span>←</span> 磁盘分区
+        </a>
+        <a href="generator/personalization" class="btn btn-primary">
+            外观设置 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private enum AccountMode { InteractiveLocal, InteractiveMicrosoft, Unattended }
+    private enum AutoLogonMode { None, Own, Builtin }
+
+    private AccountMode accountMode = AccountMode.InteractiveLocal;
+    private List<Account> accounts = new();
+    private AutoLogonMode autoLogonMode = AutoLogonMode.None;
+    private bool obscurePasswords = true;
+    private string builtinAdminPassword = "";
+
+    // 表单状态
+    private Account? editingAccount = null;
+    private string newUsername = "";
+    private string newDisplayName = "";
+    private string newPassword = "";
+    private bool isAdmin = true;
+    private string usernameError = "";
+
+    protected override void OnInitialized()
+    {
+        switch (Config.AccountSettings)
+        {
+            case InteractiveLocalAccountSettings:
+                accountMode = AccountMode.InteractiveLocal;
+                break;
+            case InteractiveMicrosoftAccountSettings:
+                accountMode = AccountMode.InteractiveMicrosoft;
+                break;
+            case UnattendedAccountSettings s:
+                accountMode = AccountMode.Unattended;
+                accounts = s.Accounts.ToList();
+                obscurePasswords = s.ObscurePasswords;
+                switch (s.AutoLogonSettings)
+                {
+                    case NoneAutoLogonSettings:
+                        autoLogonMode = AutoLogonMode.None;
+                        break;
+                    case OwnAutoLogonSettings:
+                        autoLogonMode = AutoLogonMode.Own;
+                        break;
+                    case BuiltinAutoLogonSettings b:
+                        autoLogonMode = AutoLogonMode.Builtin;
+                        builtinAdminPassword = b.Password;
+                        break;
+                }
+                break;
+        }
+    }
+
+    private void SetAccountMode(AccountMode mode)
+    {
+        accountMode = mode;
+        UpdateSettings();
+    }
+
+    private void SetAutoLogonMode(AutoLogonMode mode)
+    {
+        autoLogonMode = mode;
+        UpdateSettings();
+    }
+
+    private void SaveAccount()
+    {
+        usernameError = "";
+
+        try
+        {
+            var account = new Account(
+                name: newUsername,
+                displayName: string.IsNullOrEmpty(newDisplayName) ? newUsername : newDisplayName,
+                password: newPassword,
+                group: isAdmin ? Constants.AdministratorsGroup : Constants.UsersGroup
+            );
+
+            if (editingAccount != null)
+            {
+                accounts.Remove(editingAccount);
+            }
+            accounts.Add(account);
+
+            ClearForm();
+            UpdateSettings();
+        }
+        catch (ConfigurationException ex)
+        {
+            usernameError = ex.Message;
+        }
+    }
+
+    private void EditAccount(Account account)
+    {
+        editingAccount = account;
+        newUsername = account.Name;
+        newDisplayName = account.DisplayName;
+        newPassword = account.Password;
+        isAdmin = account.Group == Constants.AdministratorsGroup;
+    }
+
+    private void RemoveAccount(Account account)
+    {
+        accounts.Remove(account);
+        UpdateSettings();
+    }
+
+    private void CancelEdit()
+    {
+        editingAccount = null;
+        ClearForm();
+    }
+
+    private void ClearForm()
+    {
+        editingAccount = null;
+        newUsername = "";
+        newDisplayName = "";
+        newPassword = "";
+        isAdmin = true;
+        usernameError = "";
+    }
+
+    private void UpdateSettings()
+    {
+        Config.AccountSettings = accountMode switch
+        {
+            AccountMode.InteractiveLocal => new InteractiveLocalAccountSettings(),
+            AccountMode.InteractiveMicrosoft => new InteractiveMicrosoftAccountSettings(),
+            AccountMode.Unattended when accounts.Any() => CreateUnattendedSettings(),
+            _ => new InteractiveLocalAccountSettings()
+        };
+    }
+
+    private UnattendedAccountSettings CreateUnattendedSettings()
+    {
+        IAutoLogonSettings autoLogon = autoLogonMode switch
+        {
+            AutoLogonMode.Own => new OwnAutoLogonSettings(),
+            AutoLogonMode.Builtin => new BuiltinAutoLogonSettings(builtinAdminPassword),
+            _ => new NoneAutoLogonSettings()
+        };
+
+        return new UnattendedAccountSettings(
+            accounts: accounts.ToImmutableList(),
+            autoLogonSettings: autoLogon,
+            obscurePasswords: obscurePasswords
+        );
+    }
+}

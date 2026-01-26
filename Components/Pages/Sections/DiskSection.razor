@@ -1,0 +1,263 @@
+@page "/generator/disk"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>磁盘分区 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>磁盘分区</h2>
+    <p>配置 Windows 安装时的磁盘分区方案。</p>
+
+    <Card Title="分区模式" Icon="💾">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(partitionMode == PartitionMode.Interactive ? "active" : "")" 
+                        @onclick="() => SetPartitionMode(PartitionMode.Interactive)">
+                    交互式
+                </button>
+                <button class="tab @(partitionMode == PartitionMode.Automatic ? "active" : "")" 
+                        @onclick="() => SetPartitionMode(PartitionMode.Automatic)">
+                    自动分区
+                </button>
+                <button class="tab @(partitionMode == PartitionMode.Custom ? "active" : "")" 
+                        @onclick="() => SetPartitionMode(PartitionMode.Custom)">
+                    自定义脚本
+                </button>
+            </div>
+        </div>
+
+        @if (partitionMode == PartitionMode.Interactive)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Windows 安装程序将显示磁盘管理界面，用户可以手动选择或创建分区。</span>
+            </div>
+        }
+        else if (partitionMode == PartitionMode.Automatic)
+        {
+            <div class="alert alert-warning">
+                <span>⚠️</span>
+                <span>自动分区将清除第一块磁盘（Disk 0）上的所有数据！</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">分区表类型</label>
+                <div class="tabs" style="max-width: 300px;">
+                    <button class="tab @(partitionLayout == PartitionLayout.GPT ? "active" : "")"
+                            @onclick="() => SetPartitionLayout(PartitionLayout.GPT)">
+                        GPT (UEFI)
+                    </button>
+                    <button class="tab @(partitionLayout == PartitionLayout.MBR ? "active" : "")"
+                            @onclick="() => SetPartitionLayout(PartitionLayout.MBR)">
+                        MBR (Legacy)
+                    </button>
+                </div>
+                <div class="form-hint">GPT 用于 UEFI 启动模式，MBR 用于传统 BIOS 启动模式</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">恢复分区</label>
+                <div class="tabs" style="max-width: 400px;">
+                    <button class="tab @(recoveryMode == RecoveryMode.Partition ? "active" : "")"
+                            @onclick="() => SetRecoveryMode(RecoveryMode.Partition)">
+                        独立分区
+                    </button>
+                    <button class="tab @(recoveryMode == RecoveryMode.Folder ? "active" : "")"
+                            @onclick="() => SetRecoveryMode(RecoveryMode.Folder)">
+                        系统文件夹
+                    </button>
+                    <button class="tab @(recoveryMode == RecoveryMode.None ? "active" : "")"
+                            @onclick="() => SetRecoveryMode(RecoveryMode.None)">
+                        不创建
+                    </button>
+                </div>
+            </div>
+
+            @if (partitionLayout == PartitionLayout.GPT)
+            {
+                <NumberField Label="EFI 系统分区大小 (MB)"
+                             HelpText="建议 100-550 MB"
+                             @bind-Value="espSize"
+                             Min="100"
+                             Max="1024" />
+            }
+
+            @if (recoveryMode == RecoveryMode.Partition)
+            {
+                <NumberField Label="恢复分区大小 (MB)"
+                             HelpText="建议 500-1000 MB"
+                             @bind-Value="recoverySize"
+                             Min="500"
+                             Max="5000" />
+            }
+        }
+        else if (partitionMode == PartitionMode.Custom)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>使用自定义 diskpart 脚本配置分区。确保脚本中包含正确的驱动器号分配。</span>
+            </div>
+
+            <TextField Label="Diskpart 脚本"
+                       Multiline="true"
+                       Rows="12"
+                       Placeholder="@diskpartPlaceholder"
+                       HelpText="输入 diskpart 命令脚本"
+                       @bind-Value="customScript" />
+
+            <div class="form-group mt-2">
+                <label class="form-label">安装目标</label>
+                <div class="input-group">
+                    <div style="flex: 1;">
+                        <label class="form-label" style="font-size: 0.8rem;">磁盘编号</label>
+                        <input type="number" class="form-control" @bind="installToDisk" min="0" />
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="form-label" style="font-size: 0.8rem;">分区编号</label>
+                        <input type="number" class="form-control" @bind="installToPartition" min="1" />
+                    </div>
+                </div>
+            </div>
+        }
+    </Card>
+
+    <Card Title="高级选项" Icon="⚙️" Collapsed="true">
+        <Toggle Title="Compact OS（压缩安装）"
+                Description="以压缩方式安装 Windows，节省磁盘空间但可能影响性能"
+                @bind-Value="compactOs" />
+
+        <SelectField Label="PE 脚本模式" TValue="string"
+                     @bind-Value="peMode"
+                     HelpText="控制 Windows PE 阶段的安装行为">
+            <option value="default">默认（使用 setup.exe）</option>
+            <option value="generate">生成 .cmd 脚本</option>
+            <option value="custom">自定义脚本</option>
+        </SelectField>
+
+        @if (peMode == "custom")
+        {
+            <TextField Label="自定义 PE 脚本"
+                       Multiline="true"
+                       Rows="8"
+                       Placeholder="@peScriptPlaceholder"
+                       @bind-Value="customPeScript" />
+        }
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/timezone" class="btn btn-secondary">
+            <span>←</span> 时区设置
+        </a>
+        <a href="generator/account" class="btn btn-primary">
+            用户账户 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private enum PartitionMode { Interactive, Automatic, Custom }
+
+    private PartitionMode partitionMode = PartitionMode.Interactive;
+    private PartitionLayout partitionLayout = PartitionLayout.GPT;
+    private RecoveryMode recoveryMode = RecoveryMode.Partition;
+    private int espSize = 100;
+    private int recoverySize = 1000;
+    private string customScript = "";
+    private int installToDisk = 0;
+    private int installToPartition = 3;
+    private bool compactOs = false;
+    private string peMode = "default";
+    private string customPeScript = "";
+
+    // Placeholder strings
+    private string diskpartPlaceholder = "SELECT DISK=0\nCLEAN\nCONVERT GPT\n...";
+    private string peScriptPlaceholder = "@echo off\nrem Your custom PE script...";
+
+    protected override void OnInitialized()
+    {
+        switch (Config.PartitionSettings)
+        {
+            case InteractivePartitionSettings:
+                partitionMode = PartitionMode.Interactive;
+                break;
+            case UnattendedPartitionSettings s:
+                partitionMode = PartitionMode.Automatic;
+                partitionLayout = s.PartitionLayout;
+                recoveryMode = s.RecoveryMode;
+                espSize = s.EspSize;
+                recoverySize = s.RecoverySize;
+                break;
+            case CustomPartitionSettings s:
+                partitionMode = PartitionMode.Custom;
+                customScript = s.Script;
+                if (s.InstallTo is CustomInstallToSettings its)
+                {
+                    installToDisk = its.InstallToDisk;
+                    installToPartition = its.InstallToPartition;
+                }
+                break;
+        }
+
+        compactOs = Config.CompactOsMode == CompactOsModes.Always;
+
+        switch (Config.PESettings)
+        {
+            case DefaultPESettings:
+                peMode = "default";
+                break;
+            case GeneratePESettings:
+                peMode = "generate";
+                break;
+            case ScriptPESetttings s:
+                peMode = "custom";
+                customPeScript = s.Script;
+                break;
+        }
+    }
+
+    private void SetPartitionMode(PartitionMode mode)
+    {
+        partitionMode = mode;
+        UpdateSettings();
+    }
+
+    private void SetPartitionLayout(PartitionLayout layout)
+    {
+        partitionLayout = layout;
+        UpdateSettings();
+    }
+
+    private void SetRecoveryMode(RecoveryMode mode)
+    {
+        recoveryMode = mode;
+        UpdateSettings();
+    }
+
+    private void UpdateSettings()
+    {
+        Config.PartitionSettings = partitionMode switch
+        {
+            PartitionMode.Interactive => new InteractivePartitionSettings(),
+            PartitionMode.Automatic => new UnattendedPartitionSettings(
+                PartitionLayout: partitionLayout,
+                RecoveryMode: recoveryMode,
+                EspSize: espSize,
+                RecoverySize: recoverySize
+            ),
+            PartitionMode.Custom => new CustomPartitionSettings(
+                Script: customScript,
+                InstallTo: new CustomInstallToSettings(installToDisk, installToPartition)
+            ),
+            _ => new InteractivePartitionSettings()
+        };
+
+        Config.CompactOsMode = compactOs ? CompactOsModes.Always : CompactOsModes.Default;
+
+        Config.PESettings = peMode switch
+        {
+            "generate" => new GeneratePESettings(false, false, false),
+            "custom" => new ScriptPESetttings(customPeScript),
+            _ => new DefaultPESettings()
+        };
+    }
+}

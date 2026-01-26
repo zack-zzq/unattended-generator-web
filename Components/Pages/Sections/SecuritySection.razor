@@ -1,0 +1,261 @@
+@page "/generator/security"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>安全设置 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>安全设置</h2>
+    <p>配置 Windows 安全功能和防护设置。</p>
+
+    <Card Title="Windows Defender" Icon="🛡️">
+        <div class="alert alert-warning">
+            <span>⚠️</span>
+            <span>禁用 Windows Defender 会降低系统安全性。请仅在使用第三方安全软件时禁用。</span>
+        </div>
+
+        <Toggle Title="禁用 Windows Defender"
+                Description="完全禁用 Windows Defender 防病毒保护"
+                Value="@Config.DisableDefender"
+                ValueChanged="v => { Config.DisableDefender = v; }" />
+        
+        <Toggle Title="禁用 SmartScreen"
+                Description="禁用应用和文件的 SmartScreen 筛选"
+                Value="@Config.DisableSmartScreen"
+                ValueChanged="v => { Config.DisableSmartScreen = v; }" />
+
+        <Toggle Title="禁用智能应用控制 (SAC)"
+                Description="禁用 Windows 11 的智能应用控制功能"
+                Value="@Config.DisableSac"
+                ValueChanged="v => { Config.DisableSac = v; }" />
+    </Card>
+
+    <Card Title="用户账户控制 (UAC)" Icon="🔐">
+        <Toggle Title="禁用 UAC"
+                Description="禁用用户账户控制提示（不推荐）"
+                Value="@Config.DisableUac"
+                ValueChanged="v => { Config.DisableUac = v; }" />
+
+        <Toggle Title="加固系统驱动器 ACL"
+                Description="移除普通用户对 C:\\ 根目录的写入权限"
+                Value="@Config.HardenSystemDriveAcl"
+                ValueChanged="v => { Config.HardenSystemDriveAcl = v; }" />
+    </Card>
+
+    <Card Title="Windows 应用程序控制 (WDAC)" Icon="🔒">
+        <div class="form-group">
+            <div class="tabs">
+                @foreach (var mode in wdacModes)
+                {
+                    <button class="tab @(wdacMode == mode.Key ? "active" : "")"
+                            @onclick="@(() => SetWdacMode(mode.Key))">
+                        @mode.Value
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (wdacMode == WdacConfigMode.Configure)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>WDAC 策略将限制可执行的应用程序，仅允许来自受信任位置的程序运行。</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">审计模式</label>
+                <div class="tabs">
+                    <button class="tab @(wdacAuditMode == WdacAuditModes.Auditing ? "active" : "")"
+                            @onclick="@(() => SetWdacAuditMode(WdacAuditModes.Auditing))">
+                        仅审计
+                    </button>
+                    <button class="tab @(wdacAuditMode == WdacAuditModes.AuditingOnBootFailure ? "active" : "")"
+                            @onclick="@(() => SetWdacAuditMode(WdacAuditModes.AuditingOnBootFailure))">
+                        启动失败时审计
+                    </button>
+                    <button class="tab @(wdacAuditMode == WdacAuditModes.Enforcement ? "active" : "")"
+                            @onclick="@(() => SetWdacAuditMode(WdacAuditModes.Enforcement))">
+                        强制执行
+                    </button>
+                </div>
+                <div class="form-hint">审计模式仅记录违规，不阻止执行；强制模式会阻止未授权程序</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">脚本模式</label>
+                <div class="tabs" style="max-width: 300px;">
+                    <button class="tab @(wdacScriptMode == WdacScriptModes.Restricted ? "active" : "")"
+                            @onclick="@(() => SetWdacScriptMode(WdacScriptModes.Restricted))">
+                        受限
+                    </button>
+                    <button class="tab @(wdacScriptMode == WdacScriptModes.Unrestricted ? "active" : "")"
+                            @onclick="@(() => SetWdacScriptMode(WdacScriptModes.Unrestricted))">
+                        不受限
+                    </button>
+                </div>
+                <div class="form-hint">控制脚本（PowerShell、VBScript 等）的执行策略</div>
+            </div>
+        }
+    </Card>
+
+    <Card Title="账户锁定策略" Icon="🔑">
+        <div class="form-group">
+            <div class="tabs">
+                @foreach (var mode in lockoutModes)
+                {
+                    <button class="tab @(lockoutMode == mode.Key ? "active" : "")"
+                            @onclick="@(() => SetLockoutMode(mode.Key))">
+                        @mode.Value
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (lockoutMode == LockoutConfigMode.Disable)
+        {
+            <div class="alert alert-warning">
+                <span>⚠️</span>
+                <span>禁用账户锁定会使系统容易受到暴力破解攻击。</span>
+            </div>
+        }
+        else if (lockoutMode == LockoutConfigMode.Custom)
+        {
+            <NumberField Label="锁定阈值"
+                         HelpText="失败登录次数达到此值后锁定账户（0 = 不锁定）"
+                         @bind-Value="lockoutThreshold"
+                         Min="0"
+                         Max="999" />
+
+            <NumberField Label="锁定持续时间（分钟）"
+                         HelpText="账户锁定的持续时间"
+                         @bind-Value="lockoutDuration"
+                         Min="1"
+                         Max="99999" />
+
+            <NumberField Label="重置计数器时间（分钟）"
+                         HelpText="此时间后重置失败登录计数器"
+                         @bind-Value="lockoutWindow"
+                         Min="1"
+                         Max="99999" />
+        }
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/wifi" class="btn btn-secondary">
+            <span>←</span> Wi-Fi 配置
+        </a>
+        <a href="generator/script" class="btn btn-primary">
+            自定义脚本 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private enum WdacConfigMode { Skip, Configure }
+    private enum LockoutConfigMode { Default, Disable, Custom }
+
+    private static readonly Dictionary<WdacConfigMode, string> wdacModes = new()
+    {
+        { WdacConfigMode.Skip, "不配置" },
+        { WdacConfigMode.Configure, "启用 WDAC" }
+    };
+
+    private static readonly Dictionary<LockoutConfigMode, string> lockoutModes = new()
+    {
+        { LockoutConfigMode.Default, "系统默认" },
+        { LockoutConfigMode.Disable, "禁用锁定" },
+        { LockoutConfigMode.Custom, "自定义" }
+    };
+
+    private WdacConfigMode wdacMode = WdacConfigMode.Skip;
+    private WdacAuditModes wdacAuditMode = WdacAuditModes.Auditing;
+    private WdacScriptModes wdacScriptMode = WdacScriptModes.Restricted;
+
+    private LockoutConfigMode lockoutMode = LockoutConfigMode.Default;
+    private int lockoutThreshold = 10;
+    private int lockoutDuration = 30;
+    private int lockoutWindow = 30;
+
+    protected override void OnInitialized()
+    {
+        // 恢复 WDAC 设置
+        switch (Config.WdacSettings)
+        {
+            case SkipWdacSettings:
+                wdacMode = WdacConfigMode.Skip;
+                break;
+            case ConfigureWdacSettings cws:
+                wdacMode = WdacConfigMode.Configure;
+                wdacAuditMode = cws.AuditMode;
+                wdacScriptMode = cws.ScriptMode;
+                break;
+        }
+
+        // 恢复锁定策略
+        switch (Config.LockoutSettings)
+        {
+            case DefaultLockoutSettings:
+                lockoutMode = LockoutConfigMode.Default;
+                break;
+            case DisableLockoutSettings:
+                lockoutMode = LockoutConfigMode.Disable;
+                break;
+            case CustomLockoutSettings cls:
+                lockoutMode = LockoutConfigMode.Custom;
+                lockoutThreshold = cls.LockoutThreshold;
+                lockoutDuration = cls.LockoutDuration;
+                lockoutWindow = cls.LockoutWindow;
+                break;
+        }
+    }
+
+    private void SetWdacMode(WdacConfigMode mode)
+    {
+        wdacMode = mode;
+        UpdateWdacSettings();
+    }
+
+    private void SetWdacAuditMode(WdacAuditModes mode)
+    {
+        wdacAuditMode = mode;
+        UpdateWdacSettings();
+    }
+
+    private void SetWdacScriptMode(WdacScriptModes mode)
+    {
+        wdacScriptMode = mode;
+        UpdateWdacSettings();
+    }
+
+    private void UpdateWdacSettings()
+    {
+        Config.WdacSettings = wdacMode switch
+        {
+            WdacConfigMode.Configure => new ConfigureWdacSettings(wdacAuditMode, wdacScriptMode),
+            _ => new SkipWdacSettings()
+        };
+    }
+
+    private void SetLockoutMode(LockoutConfigMode mode)
+    {
+        lockoutMode = mode;
+        UpdateLockoutSettings();
+    }
+
+    private void UpdateLockoutSettings()
+    {
+        try
+        {
+            Config.LockoutSettings = lockoutMode switch
+            {
+                LockoutConfigMode.Disable => new DisableLockoutSettings(),
+                LockoutConfigMode.Custom => new CustomLockoutSettings(lockoutThreshold, lockoutDuration, lockoutWindow),
+                _ => new DefaultLockoutSettings()
+            };
+        }
+        catch (ConfigurationException)
+        {
+            Config.LockoutSettings = new DefaultLockoutSettings();
+        }
+    }
+}

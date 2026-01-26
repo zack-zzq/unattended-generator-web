@@ -1,11 +1,11 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="Windows 无人值守安装应答文件生成器 - 轻松创建 autounattend.xml"/>
     <base href="/"/>
-    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]"/>
     <link rel="stylesheet" href="@Assets["app.css"]"/>
     <link rel="stylesheet" href="@Assets["unattended-generator-web.styles.css"]"/>
     <ImportMap/>
@@ -16,6 +16,16 @@
 <body>
 <Routes/>
 <script src="_framework/blazor.web.js"></script>
+<script>
+    function downloadFile(filename, base64Content) {
+        const link = document.createElement('a');
+        link.href = 'data:application/xml;base64,' + base64Content;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 </body>
 
 </html>

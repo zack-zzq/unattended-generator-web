@@ -1,0 +1,137 @@
+@page "/generator/preview"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>预览配置 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>预览配置</h2>
+    <p>查看生成的 autounattend.xml 内容。</p>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            <span>❌</span>
+            <div>
+                <strong>生成失败</strong>
+                <p class="mb-0">@errorMessage</p>
+            </div>
+        </div>
+    }
+
+    <Card Title="生成的 XML 内容" Icon="📄">
+        <div class="d-flex justify-between mb-2">
+            <div>
+                @if (!string.IsNullOrEmpty(xmlContent))
+                {
+                    <span class="badge badge-success">✓ 生成成功</span>
+                    <span class="badge ms-1">@xmlContent.Length 字符</span>
+                }
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary btn-sm" @onclick="GeneratePreview">
+                    🔄 重新生成
+                </button>
+                <button class="btn btn-secondary btn-sm" @onclick="CopyToClipboard" disabled="@(string.IsNullOrEmpty(xmlContent))">
+                    📋 复制到剪贴板
+                </button>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="text-center p-3">
+                <p class="text-muted">正在生成 XML...</p>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(xmlContent))
+        {
+            <div style="width: 100%; overflow: hidden;">
+                <pre style="max-height: 600px; overflow: auto; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; font-family: 'Cascadia Code', Consolas, monospace; font-size: 0.8125rem; line-height: 1.5; margin: 0; white-space: pre; word-wrap: normal;"><code>@xmlContent</code></pre>
+            </div>
+        }
+        else
+        {
+            <div class="text-center p-3">
+                <p class="text-muted">点击"重新生成"按钮预览 XML 内容</p>
+            </div>
+        }
+    </Card>
+
+    @if (copySuccess)
+    {
+        <div class="alert alert-success">
+            <span>✓</span>
+            <span>XML 内容已复制到剪贴板</span>
+        </div>
+    }
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/advanced" class="btn btn-secondary">
+            <span>←</span> 高级选项
+        </a>
+        <a href="generator/download" class="btn btn-primary">
+            下载 XML <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private string xmlContent = "";
+    private string errorMessage = "";
+    private bool isLoading = false;
+    private bool copySuccess = false;
+
+    protected override void OnInitialized()
+    {
+        GeneratePreview();
+    }
+
+    private void GeneratePreview()
+    {
+        isLoading = true;
+        errorMessage = "";
+        xmlContent = "";
+        copySuccess = false;
+
+        try
+        {
+            xmlContent = Config.GenerateXml();
+        }
+        catch (ConfigurationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"生成时发生错误: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", xmlContent);
+            copySuccess = true;
+            
+            // 3秒后隐藏成功提示
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                copySuccess = false;
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        catch
+        {
+            // 剪贴板访问失败，可能是权限问题
+        }
+    }
+}

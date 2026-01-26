@@ -1,0 +1,167 @@
+@page "/generator/bloatware"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>预装软件删除 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>预装软件删除</h2>
+    <p>选择要从 Windows 安装中删除的预装应用程序。</p>
+
+    <div class="d-flex justify-between align-center mb-2">
+        <div>
+            <span class="badge badge-primary">已选择 @selectedIds.Count 项</span>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary btn-sm" @onclick="SelectAll">全选</button>
+            <button class="btn btn-secondary btn-sm" @onclick="SelectNone">取消全选</button>
+            <button class="btn btn-secondary btn-sm" @onclick="SelectRecommended">推荐选择</button>
+        </div>
+    </div>
+
+    <!-- 按类别分组显示 -->
+    @foreach (var group in GetGroupedBloatwares())
+    {
+        <Card Title="@group.Key" Icon="📦">
+            <div class="option-grid">
+                @foreach (var bw in group)
+                {
+                    <div class="option-item @(selectedIds.Contains(bw.Id) ? "selected" : "")"
+                         @onclick="() => ToggleSelection(bw)">
+                        <input type="checkbox" 
+                               class="form-check-input"
+                               checked="@selectedIds.Contains(bw.Id)"
+                               @onclick:stopPropagation="true"
+                               @onchange="() => ToggleSelection(bw)" />
+                        <div class="list-item-text">
+                            <div class="list-item-title">@bw.DisplayName</div>
+                            <div class="list-item-subtitle">@GetBloatwareDescription(bw)</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </Card>
+    }
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/optimization" class="btn btn-secondary">
+            <span>←</span> 系统优化
+        </a>
+        <a href="generator/wifi" class="btn btn-primary">
+            Wi-Fi 配置 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private HashSet<string> selectedIds = new();
+
+    protected override void OnInitialized()
+    {
+        selectedIds = Config.SelectedBloatwares.Select(b => b.Id).ToHashSet();
+    }
+
+    private void ToggleSelection(Bloatware bw)
+    {
+        if (selectedIds.Contains(bw.Id))
+        {
+            selectedIds.Remove(bw.Id);
+        }
+        else
+        {
+            selectedIds.Add(bw.Id);
+        }
+        UpdateSettings();
+    }
+
+    private void SelectAll()
+    {
+        selectedIds = Config.AvailableBloatwares.Select(b => b.Id).ToHashSet();
+        UpdateSettings();
+    }
+
+    private void SelectNone()
+    {
+        selectedIds.Clear();
+        UpdateSettings();
+    }
+
+    private void SelectRecommended()
+    {
+        // 推荐删除：广告类、游戏类、可选功能类
+        var recommended = new[] {
+            "RemoveOneDrive",
+            "RemoveTeams", 
+            "RemoveCopilot",
+            "RemoveOutlook",
+            "RemoveDevHome",
+            "RemoveBingSearch",
+            "RemoveClipchamp",
+            "RemoveGetHelp",
+            "RemoveMixedReality",
+            "RemoveOfficeHub",
+            "RemovePeople",
+            "RemoveSolitaire",
+            "RemoveTips",
+            "RemoveWeather",
+            "RemoveXboxApps"
+        };
+        
+        selectedIds = Config.AvailableBloatwares
+            .Where(b => recommended.Contains(b.Id))
+            .Select(b => b.Id)
+            .ToHashSet();
+        UpdateSettings();
+    }
+
+    private void UpdateSettings()
+    {
+        Config.SelectedBloatwares = Config.AvailableBloatwares
+            .Where(b => selectedIds.Contains(b.Id))
+            .ToImmutableList();
+    }
+
+    private IEnumerable<IGrouping<string, Bloatware>> GetGroupedBloatwares()
+    {
+        return Config.AvailableBloatwares
+            .GroupBy(b => GetCategory(b))
+            .OrderBy(g => g.Key);
+    }
+
+    private string GetCategory(Bloatware bw)
+    {
+        var id = bw.Id.ToLowerInvariant();
+        
+        if (id.Contains("xbox") || id.Contains("solitaire") || id.Contains("game"))
+            return "🎮 游戏和娱乐";
+        if (id.Contains("office") || id.Contains("onedrive") || id.Contains("teams") || id.Contains("outlook"))
+            return "📎 Office 和生产力";
+        if (id.Contains("edge") || id.Contains("bing") || id.Contains("copilot"))
+            return "🌐 浏览器和搜索";
+        if (id.Contains("ie") || id.Contains("internet"))
+            return "📜 旧版组件";
+        if (id.Contains("media") || id.Contains("photo") || id.Contains("camera") || id.Contains("music"))
+            return "🎵 媒体和照片";
+        
+        return "📦 其他应用";
+    }
+
+    private string GetBloatwareDescription(Bloatware bw)
+    {
+        // 为常见的bloatware提供中文描述
+        return bw.Id switch
+        {
+            "RemoveOneDrive" => "微软云存储服务",
+            "RemoveTeams" => "Microsoft Teams 聊天应用",
+            "RemoveCopilot" => "Windows AI 助手",
+            "RemoveOutlook" => "新版 Outlook 邮件客户端",
+            "RemoveDevHome" => "开发者主页应用",
+            "RemoveXboxApps" => "Xbox 游戏服务和应用",
+            "RemoveSolitaire" => "微软纸牌游戏",
+            "RemoveEdge" => "Microsoft Edge 浏览器",
+            "RemoveNotepad" => "新版记事本应用",
+            "RemoveInternetExplorer" => "Internet Explorer 浏览器",
+            _ => bw.Id.Replace("Remove", "")
+        };
+    }
+}

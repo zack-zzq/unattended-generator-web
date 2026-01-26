@@ -1,0 +1,57 @@
+@* 文本输入组件 *@
+
+<div class="form-group">
+    <label class="form-label">
+        @Label
+        @if (!string.IsNullOrEmpty(Hint))
+        {
+            <span class="form-label-hint">@Hint</span>
+        }
+    </label>
+    @if (Multiline)
+    {
+        <textarea class="form-control" 
+                  value="@Value"
+                  placeholder="@Placeholder"
+                  rows="@Rows"
+                  @oninput="OnInput"
+                  disabled="@Disabled"></textarea>
+    }
+    else
+    {
+        <input type="@InputType" 
+               class="form-control" 
+               value="@Value"
+               placeholder="@Placeholder"
+               @oninput="OnInput"
+               disabled="@Disabled" />
+    }
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <div class="form-hint">@HelpText</div>
+    }
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="form-error">@ErrorMessage</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Hint { get; set; } = "";
+    [Parameter] public string HelpText { get; set; } = "";
+    [Parameter] public string Placeholder { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool Multiline { get; set; } = false;
+    [Parameter] public int Rows { get; set; } = 4;
+    [Parameter] public string InputType { get; set; } = "text";
+    [Parameter] public string ErrorMessage { get; set; } = "";
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        Value = e.Value?.ToString() ?? "";
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

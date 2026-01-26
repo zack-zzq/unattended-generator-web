@@ -1,0 +1,373 @@
+@page "/generator/personalization"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>外观设置 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>外观设置</h2>
+    <p>自定义 Windows 的视觉外观和个性化设置。</p>
+
+    <Card Title="颜色主题" Icon="🎨">
+        <div class="form-group">
+            <div class="tabs">
+                <button class="tab @(!enableColorCustomization ? "active" : "")" 
+                        @onclick="@(() => SetColorMode(false))">
+                    使用系统默认
+                </button>
+                <button class="tab @(enableColorCustomization ? "active" : "")" 
+                        @onclick="@(() => SetColorMode(true))">
+                    自定义颜色
+                </button>
+            </div>
+        </div>
+
+        @if (enableColorCustomization)
+        {
+            <div class="form-group">
+                <label class="form-label">系统主题</label>
+                <div class="tabs" style="max-width: 200px;">
+                    <button class="tab @(systemTheme == ColorTheme.Dark ? "active" : "")"
+                            @onclick="@(() => SetSystemTheme(ColorTheme.Dark))">
+                        深色
+                    </button>
+                    <button class="tab @(systemTheme == ColorTheme.Light ? "active" : "")"
+                            @onclick="@(() => SetSystemTheme(ColorTheme.Light))">
+                        浅色
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">应用主题</label>
+                <div class="tabs" style="max-width: 200px;">
+                    <button class="tab @(appsTheme == ColorTheme.Dark ? "active" : "")"
+                            @onclick="@(() => SetAppsTheme(ColorTheme.Dark))">
+                        深色
+                    </button>
+                    <button class="tab @(appsTheme == ColorTheme.Light ? "active" : "")"
+                            @onclick="@(() => SetAppsTheme(ColorTheme.Light))">
+                        浅色
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">主题色</label>
+                <div class="d-flex gap-2 align-center">
+                    <input type="color" 
+                           value="@accentColorHex" 
+                           @oninput="OnAccentColorChange"
+                           style="width: 60px; height: 40px; border: none; cursor: pointer;" />
+                    <span class="text-muted">@accentColorHex</span>
+                </div>
+            </div>
+
+            <Toggle Title="启用透明效果"
+                    Description="启用窗口模糊透明效果"
+                    @bind-Value="enableTransparency" />
+
+            <Toggle Title="在开始菜单显示主题色"
+                    Description="将主题色应用到开始菜单和任务栏"
+                    @bind-Value="accentColorOnStart" />
+
+            <Toggle Title="在标题栏显示主题色"
+                    Description="将主题色应用到窗口边框和标题栏"
+                    @bind-Value="accentColorOnBorders" />
+        }
+    </Card>
+
+    <Card Title="壁纸设置" Icon="🖼️">
+        <div class="form-group">
+            <div class="tabs">
+                @foreach (var mode in wallpaperModeOptions)
+                {
+                    <button class="tab @(wallpaperMode == mode.Key ? "active" : "")" 
+                            @onclick="@(() => SetWallpaperMode(mode.Key))">
+                        @mode.Value
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (wallpaperMode == WallpaperConfigMode.Solid)
+        {
+            <div class="form-group">
+                <label class="form-label">背景颜色</label>
+                <div class="d-flex gap-2 align-center">
+                    <input type="color" 
+                           value="@wallpaperColorHex" 
+                           @oninput="OnWallpaperColorChange"
+                           style="width: 60px; height: 40px; border: none; cursor: pointer;" />
+                    <span class="text-muted">@wallpaperColorHex</span>
+                </div>
+            </div>
+        }
+        else if (wallpaperMode == WallpaperConfigMode.Script)
+        {
+            <TextField Label="壁纸获取脚本"
+                       Multiline="true"
+                       Rows="6"
+                       Placeholder="# PowerShell 脚本，返回图片字节数组
+# 例如：从网络下载
+(Invoke-WebRequest -Uri 'https://example.com/wallpaper.jpg').Content"
+                       HelpText="PowerShell 脚本，需返回图片的字节数组"
+                       @bind-Value="wallpaperScript" />
+        }
+    </Card>
+
+    <Card Title="开始菜单布局" Icon="📌">
+        <div class="form-group">
+            <label class="form-label">固定项目布局 (Windows 11)</label>
+            <div class="tabs">
+                @foreach (var mode in startPinsModeOptions)
+                {
+                    <button class="tab @(startPinsMode == mode.Key ? "active" : "")"
+                            @onclick="@(() => SetStartPinsMode(mode.Key))">
+                        @mode.Value
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (startPinsMode == LayoutConfigMode.Custom)
+        {
+            <TextField Label="开始菜单 JSON"
+                       Multiline="true"
+                       Rows="6"
+                       Placeholder="{&quot;pinnedList&quot;:[]}"
+                       HelpText="Windows 11 开始菜单固定项目 JSON 配置"
+                       @bind-Value="startPinsJson" />
+        }
+    </Card>
+
+    <Card Title="任务栏布局" Icon="📍">
+        <div class="form-group">
+            <label class="form-label">任务栏固定项目</label>
+            <div class="tabs">
+                @foreach (var mode in taskbarModeOptions)
+                {
+                    <button class="tab @(taskbarMode == mode.Key ? "active" : "")"
+                            @onclick="@(() => SetTaskbarMode(mode.Key))">
+                        @mode.Value
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (taskbarMode == LayoutConfigMode.Custom)
+        {
+            <TextField Label="任务栏布局 XML"
+                       Multiline="true"
+                       Rows="8"
+                       Placeholder="<LayoutModificationTemplate>..."
+                       HelpText="任务栏布局修改 XML"
+                       @bind-Value="taskbarXml" />
+        }
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/account" class="btn btn-secondary">
+            <span>←</span> 用户账户
+        </a>
+        <a href="generator/optimization" class="btn btn-primary">
+            系统优化 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private enum WallpaperConfigMode { Default, Solid, Script }
+    private enum LayoutConfigMode { Default, Empty, Custom }
+
+    private static readonly Dictionary<WallpaperConfigMode, string> wallpaperModeOptions = new()
+    {
+        { WallpaperConfigMode.Default, "使用默认壁纸" },
+        { WallpaperConfigMode.Solid, "纯色背景" },
+        { WallpaperConfigMode.Script, "自定义脚本" }
+    };
+
+    private static readonly Dictionary<LayoutConfigMode, string> startPinsModeOptions = new()
+    {
+        { LayoutConfigMode.Default, "系统默认" },
+        { LayoutConfigMode.Empty, "清空布局" },
+        { LayoutConfigMode.Custom, "自定义 JSON" }
+    };
+
+    private static readonly Dictionary<LayoutConfigMode, string> taskbarModeOptions = new()
+    {
+        { LayoutConfigMode.Default, "系统默认" },
+        { LayoutConfigMode.Empty, "清空任务栏" },
+        { LayoutConfigMode.Custom, "自定义 XML" }
+    };
+
+    // 颜色设置
+    private bool enableColorCustomization = false;
+    private ColorTheme systemTheme = ColorTheme.Dark;
+    private ColorTheme appsTheme = ColorTheme.Dark;
+    private string accentColorHex = "#0078D4";
+    private bool enableTransparency = true;
+    private bool accentColorOnStart = false;
+    private bool accentColorOnBorders = false;
+
+    // 壁纸设置
+    private WallpaperConfigMode wallpaperMode = WallpaperConfigMode.Default;
+    private string wallpaperColorHex = "#000000";
+    private string wallpaperScript = "";
+
+    // 开始菜单
+    private LayoutConfigMode startPinsMode = LayoutConfigMode.Default;
+    private string startPinsJson = "";
+
+    // 任务栏
+    private LayoutConfigMode taskbarMode = LayoutConfigMode.Default;
+    private string taskbarXml = "";
+
+    protected override void OnInitialized()
+    {
+        // 恢复颜色设置
+        if (Config.ColorSettings is CustomColorSettings cs)
+        {
+            enableColorCustomization = true;
+            systemTheme = cs.SystemTheme;
+            appsTheme = cs.AppsTheme;
+            accentColorHex = System.Drawing.ColorTranslator.ToHtml(cs.AccentColor);
+            enableTransparency = cs.EnableTransparency;
+            accentColorOnStart = cs.AccentColorOnStart;
+            accentColorOnBorders = cs.AccentColorOnBorders;
+        }
+
+        // 恢复壁纸设置
+        switch (Config.WallpaperSettings)
+        {
+            case SolidWallpaperSettings sws:
+                wallpaperMode = WallpaperConfigMode.Solid;
+                wallpaperColorHex = System.Drawing.ColorTranslator.ToHtml(sws.Color);
+                break;
+            case ScriptWallpaperSettings scws:
+                wallpaperMode = WallpaperConfigMode.Script;
+                wallpaperScript = scws.Script;
+                break;
+        }
+
+        // 恢复开始菜单设置
+        switch (Config.StartPinsSettings)
+        {
+            case EmptyStartPinsSettings:
+                startPinsMode = LayoutConfigMode.Empty;
+                break;
+            case CustomStartPinsSettings csps:
+                startPinsMode = LayoutConfigMode.Custom;
+                startPinsJson = csps.Json;
+                break;
+        }
+
+        // 恢复任务栏设置
+        switch (Config.TaskbarIcons)
+        {
+            case EmptyTaskbarIcons:
+                taskbarMode = LayoutConfigMode.Empty;
+                break;
+            case CustomTaskbarIcons cti:
+                taskbarMode = LayoutConfigMode.Custom;
+                taskbarXml = cti.Xml;
+                break;
+        }
+    }
+
+    private void SetColorMode(bool custom)
+    {
+        enableColorCustomization = custom;
+        UpdateColorSettings();
+    }
+
+    private void SetSystemTheme(ColorTheme theme)
+    {
+        systemTheme = theme;
+        UpdateColorSettings();
+    }
+
+    private void SetAppsTheme(ColorTheme theme)
+    {
+        appsTheme = theme;
+        UpdateColorSettings();
+    }
+
+    private void OnAccentColorChange(ChangeEventArgs e)
+    {
+        accentColorHex = e.Value?.ToString() ?? "#0078D4";
+        UpdateColorSettings();
+    }
+
+    private void UpdateColorSettings()
+    {
+        if (!enableColorCustomization)
+        {
+            Config.ColorSettings = new DefaultColorSettings();
+            return;
+        }
+
+        try
+        {
+            var color = System.Drawing.ColorTranslator.FromHtml(accentColorHex);
+            Config.ColorSettings = new CustomColorSettings(
+                SystemTheme: systemTheme,
+                AppsTheme: appsTheme,
+                EnableTransparency: enableTransparency,
+                AccentColorOnStart: accentColorOnStart,
+                AccentColorOnBorders: accentColorOnBorders,
+                AccentColor: color
+            );
+        }
+        catch
+        {
+            Config.ColorSettings = new DefaultColorSettings();
+        }
+    }
+
+    private void SetWallpaperMode(WallpaperConfigMode mode)
+    {
+        wallpaperMode = mode;
+        UpdateWallpaperSettings();
+    }
+
+    private void OnWallpaperColorChange(ChangeEventArgs e)
+    {
+        wallpaperColorHex = e.Value?.ToString() ?? "#000000";
+        UpdateWallpaperSettings();
+    }
+
+    private void UpdateWallpaperSettings()
+    {
+        Config.WallpaperSettings = wallpaperMode switch
+        {
+            WallpaperConfigMode.Solid => new SolidWallpaperSettings(
+                System.Drawing.ColorTranslator.FromHtml(wallpaperColorHex)),
+            WallpaperConfigMode.Script when !string.IsNullOrEmpty(wallpaperScript) => 
+                new ScriptWallpaperSettings(wallpaperScript),
+            _ => new DefaultWallpaperSettings()
+        };
+    }
+
+    private void SetStartPinsMode(LayoutConfigMode mode)
+    {
+        startPinsMode = mode;
+        Config.StartPinsSettings = mode switch
+        {
+            LayoutConfigMode.Empty => new EmptyStartPinsSettings(),
+            LayoutConfigMode.Custom when !string.IsNullOrEmpty(startPinsJson) => new CustomStartPinsSettings(startPinsJson),
+            _ => new DefaultStartPinsSettings()
+        };
+    }
+
+    private void SetTaskbarMode(LayoutConfigMode mode)
+    {
+        taskbarMode = mode;
+        Config.TaskbarIcons = mode switch
+        {
+            LayoutConfigMode.Empty => new EmptyTaskbarIcons(),
+            LayoutConfigMode.Custom when !string.IsNullOrEmpty(taskbarXml) => new CustomTaskbarIcons(taskbarXml),
+            _ => new DefaultTaskbarIcons()
+        };
+    }
+}

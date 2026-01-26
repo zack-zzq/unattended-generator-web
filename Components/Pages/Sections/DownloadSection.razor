@@ -1,0 +1,199 @@
+@page "/generator/download"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+@inject IJSRuntime JS
+
+<PageTitle>下载 XML - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>下载 autounattend.xml</h2>
+    <p>生成并下载 Windows 无人值守安装应答文件。</p>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            <span>❌</span>
+            <div>
+                <strong>生成失败</strong>
+                <p class="mb-0">@errorMessage</p>
+            </div>
+        </div>
+    }
+
+    <Card Title="配置摘要" Icon="📋">
+        <div class="list">
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>Windows 版本</span>
+                </div>
+                <span class="badge">@GetEditionDisplay()</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>语言设置</span>
+                </div>
+                <span class="badge">@GetLanguageDisplay()</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>账户模式</span>
+                </div>
+                <span class="badge">@GetAccountDisplay()</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>磁盘分区</span>
+                </div>
+                <span class="badge">@GetPartitionDisplay()</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>删除的预装软件</span>
+                </div>
+                <span class="badge">@Config.SelectedBloatwares.Count 项</span>
+            </div>
+            <div class="list-item">
+                <div class="list-item-content">
+                    <span>自定义脚本</span>
+                </div>
+                <span class="badge">@Config.ScriptSettings.Scripts.Count() 个</span>
+            </div>
+        </div>
+    </Card>
+
+    <Card Title="下载选项" Icon="📥">
+        <div class="text-center p-3">
+            <button class="btn btn-primary btn-lg" @onclick="DownloadXml" disabled="@isDownloading">
+                @if (isDownloading)
+                {
+                    <span>生成中...</span>
+                }
+                else
+                {
+                    <span>📥 下载 autounattend.xml</span>
+                }
+            </button>
+            
+            <p class="text-muted mt-2">
+                将文件保存到 USB 安装介质的根目录
+            </p>
+        </div>
+    </Card>
+
+    @if (downloadSuccess)
+    {
+        <div class="alert alert-success">
+            <span>✓</span>
+            <div>
+                <strong>下载已开始</strong>
+                <p class="mb-0">请将 autounattend.xml 文件复制到 Windows 安装 U 盘的根目录。</p>
+            </div>
+        </div>
+    }
+
+    <Card Title="使用说明" Icon="📖" Collapsed="false">
+        <ol style="padding-left: 1.5rem; line-height: 2;">
+            <li>点击上方按钮下载 <code>autounattend.xml</code> 文件</li>
+            <li>准备一个 Windows 安装 U 盘（使用 Rufus 或 MediaCreationTool 创建）</li>
+            <li>将下载的 <code>autounattend.xml</code> 复制到 U 盘根目录</li>
+            <li>使用该 U 盘启动计算机进行 Windows 安装</li>
+            <li>安装程序将自动读取配置并执行无人值守安装</li>
+        </ol>
+
+        <div class="alert alert-warning mt-2">
+            <span>⚠️</span>
+            <div>
+                <strong>注意事项</strong>
+                <ul class="mb-0" style="padding-left: 1.5rem;">
+                    <li>如果配置了自动分区，将会清除目标磁盘上的所有数据</li>
+                    <li>密码会以明文（或 Base64 编码）形式存储在 XML 中</li>
+                    <li>建议在测试环境中先验证配置</li>
+                </ul>
+            </div>
+        </div>
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/preview" class="btn btn-secondary">
+            <span>←</span> 预览配置
+        </a>
+        <a href="/" class="btn btn-primary">
+            返回首页 <span>🏠</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private string errorMessage = "";
+    private bool isDownloading = false;
+    private bool downloadSuccess = false;
+
+    private async Task DownloadXml()
+    {
+        isDownloading = true;
+        errorMessage = "";
+        downloadSuccess = false;
+
+        try
+        {
+            var xmlBytes = Config.GenerateXmlBytes();
+            var base64 = Convert.ToBase64String(xmlBytes);
+            
+            await JS.InvokeVoidAsync("downloadFile", "autounattend.xml", base64);
+            downloadSuccess = true;
+        }
+        catch (ConfigurationException ex)
+        {
+            errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"生成时发生错误: {ex.Message}";
+        }
+        finally
+        {
+            isDownloading = false;
+        }
+    }
+
+    private string GetEditionDisplay()
+    {
+        return Config.EditionSettings switch
+        {
+            UnattendedEditionSettings s => s.Edition.DisplayName,
+            CustomEditionSettings => "自定义密钥",
+            FirmwareEditionSettings => "从固件读取",
+            _ => "交互式选择"
+        };
+    }
+
+    private string GetLanguageDisplay()
+    {
+        return Config.LanguageSettings switch
+        {
+            UnattendedLanguageSettings s => s.ImageLanguage.DisplayName,
+            _ => "交互式选择"
+        };
+    }
+
+    private string GetAccountDisplay()
+    {
+        return Config.AccountSettings switch
+        {
+            UnattendedAccountSettings s => $"{s.Accounts.Count} 个账户",
+            InteractiveMicrosoftAccountSettings => "Microsoft 账户",
+            InteractiveLocalAccountSettings => "本地账户（交互式）",
+            _ => "未配置"
+        };
+    }
+
+    private string GetPartitionDisplay()
+    {
+        return Config.PartitionSettings switch
+        {
+            UnattendedPartitionSettings s => $"{s.PartitionLayout} 自动分区",
+            CustomPartitionSettings => "自定义脚本",
+            _ => "交互式选择"
+        };
+    }
+}

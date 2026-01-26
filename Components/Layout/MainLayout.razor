@@ -1,23 +1,38 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu/>
-    </div>
+    <aside class="sidebar">
+        <NavMenu />
+    </aside>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+    <div class="main-content">
+        <header class="top-bar">
+            <div class="d-flex align-center gap-2">
+                <h4 class="mt-0 mb-0">@Title</h4>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <a href="generator/preview" class="btn btn-secondary">
+                    <span>👁️</span> 预览 XML
+                </a>
+                <a href="generator/download" class="btn btn-primary">
+                    <span>📥</span> 生成 XML
+                </a>
+            </div>
+        </header>
 
-        <article class="content px-4">
+        <main class="content-area">
             @Body
-        </article>
-    </main>
+        </main>
+    </div>
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
+    发生了未处理的错误。
+    <a href="." class="reload">重新加载</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private string Title { get; set; } = "Windows 无人值守安装生成器";
+}

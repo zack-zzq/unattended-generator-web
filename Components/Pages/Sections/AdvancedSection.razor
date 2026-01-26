@@ -1,0 +1,190 @@
+@page "/generator/advanced"
+@rendermode InteractiveServer
+@inject ConfigurationService Config
+
+<PageTitle>高级选项 - 无人值守安装生成器</PageTitle>
+
+<div class="animate-fade-in">
+    <h2>高级选项</h2>
+    <p>配置高级安装选项，如计算机名称、系统检查绕过等。</p>
+
+    <Card Title="计算机名称" Icon="💻">
+        <div class="form-group">
+            <div class="tabs">
+                @foreach (var mode in computerNameModeOptions)
+                {
+                    <button class="tab @(computerNameMode == mode.Key ? "active" : "")"
+                            @onclick="@(() => SetComputerNameMode(mode.Key))">
+                        @mode.Value
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (computerNameMode == ComputerNameConfigMode.Random)
+        {
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <span>Windows 将在安装时自动生成随机计算机名称。</span>
+            </div>
+        }
+        else if (computerNameMode == ComputerNameConfigMode.Custom)
+        {
+            <TextField Label="计算机名称"
+                       Placeholder="MY-COMPUTER"
+                       HelpText="最多 15 个字符，不能包含特殊字符"
+                       @bind-Value="computerName"
+                       ErrorMessage="@computerNameError" />
+        }
+        else if (computerNameMode == ComputerNameConfigMode.Script)
+        {
+            <TextField Label="名称生成脚本"
+                       Multiline="true"
+                       Rows="6"
+                       Placeholder="# PowerShell 脚本，输出计算机名称
+$prefix = 'PC'
+$suffix = Get-Random -Maximum 9999
+\"$prefix-$suffix\""
+                       HelpText="PowerShell 脚本，输出将作为计算机名称"
+                       @bind-Value="computerNameScript" />
+        }
+    </Card>
+
+    <Card Title="系统检查绕过" Icon="🔓">
+        <div class="alert alert-warning">
+            <span>⚠️</span>
+            <span>绕过系统检查可能导致在不受支持的硬件上安装 Windows，可能会遇到兼容性问题。</span>
+        </div>
+
+        <Toggle Title="绕过系统要求检查"
+                Description="跳过 TPM 2.0、安全启动和 RAM 检查"
+                Value="@Config.BypassRequirementsCheck"
+                ValueChanged="v => { Config.BypassRequirementsCheck = v; }" />
+
+        <Toggle Title="绕过网络要求"
+                Description="跳过 OOBE 阶段的网络连接要求"
+                Value="@Config.BypassNetworkCheck"
+                ValueChanged="v => { Config.BypassNetworkCheck = v; }" />
+    </Card>
+
+    <Card Title="隐私设置模式" Icon="🔐">
+        <div class="form-group">
+            <label class="form-label">Windows 体验设置</label>
+            <div class="tabs">
+                <button class="tab @(Config.ExpressSettings == ExpressSettingsMode.Interactive ? "active" : "")"
+                        @onclick="@(() => Config.ExpressSettings = ExpressSettingsMode.Interactive)">
+                    交互式选择
+                </button>
+                <button class="tab @(Config.ExpressSettings == ExpressSettingsMode.DisableAll ? "active" : "")"
+                        @onclick="@(() => Config.ExpressSettings = ExpressSettingsMode.DisableAll)">
+                    全部禁用
+                </button>
+                <button class="tab @(Config.ExpressSettings == ExpressSettingsMode.EnableAll ? "active" : "")"
+                        @onclick="@(() => Config.ExpressSettings = ExpressSettingsMode.EnableAll)">
+                    全部启用
+                </button>
+            </div>
+            <div class="form-hint">控制诊断数据收集、广告 ID、位置等隐私设置</div>
+        </div>
+    </Card>
+
+    <Card Title="处理器架构" Icon="🖥️">
+        <div class="form-group">
+            <div class="tabs" style="max-width: 300px;">
+                <button class="tab @(Config.ProcessorArchitecture == ProcessorArchitecture.amd64 ? "active" : "")"
+                        @onclick="@(() => Config.ProcessorArchitecture = ProcessorArchitecture.amd64)">
+                    x64 (AMD64)
+                </button>
+                <button class="tab @(Config.ProcessorArchitecture == ProcessorArchitecture.x86 ? "active" : "")"
+                        @onclick="@(() => Config.ProcessorArchitecture = ProcessorArchitecture.x86)">
+                    x86 (32位)
+                </button>
+            </div>
+            <div class="form-hint">选择目标系统的处理器架构</div>
+        </div>
+    </Card>
+
+    <Card Title="其他高级选项" Icon="⚙️">
+        <Toggle Title="启用配置集 (ConfigurationSet)"
+                Description="使用新的 ConfigurationSet 功能来应用设置"
+                Value="@Config.UseConfigurationSet"
+                ValueChanged="v => { Config.UseConfigurationSet = v; }" />
+
+        <Toggle Title="启用讲述人"
+                Description="在 Windows PE 阶段启用讲述人辅助功能"
+                Value="@Config.UseNarrator"
+                ValueChanged="v => { Config.UseNarrator = v; }" />
+    </Card>
+
+    <div class="d-flex justify-between mt-3">
+        <a href="generator/script" class="btn btn-secondary">
+            <span>←</span> 自定义脚本
+        </a>
+        <a href="generator/preview" class="btn btn-primary">
+            预览配置 <span>→</span>
+        </a>
+    </div>
+</div>
+
+@code {
+    private enum ComputerNameConfigMode { Random, Custom, Script }
+
+    private static readonly Dictionary<ComputerNameConfigMode, string> computerNameModeOptions = new()
+    {
+        { ComputerNameConfigMode.Random, "随机生成" },
+        { ComputerNameConfigMode.Custom, "自定义名称" },
+        { ComputerNameConfigMode.Script, "脚本生成" }
+    };
+
+    private ComputerNameConfigMode computerNameMode = ComputerNameConfigMode.Random;
+    private string computerName = "";
+    private string computerNameScript = "";
+    private string computerNameError = "";
+
+    protected override void OnInitialized()
+    {
+        switch (Config.ComputerNameSettings)
+        {
+            case RandomComputerNameSettings:
+                computerNameMode = ComputerNameConfigMode.Random;
+                break;
+            case CustomComputerNameSettings ccns:
+                computerNameMode = ComputerNameConfigMode.Custom;
+                computerName = ccns.ComputerName;
+                break;
+            case ScriptComputerNameSettings scns:
+                computerNameMode = ComputerNameConfigMode.Script;
+                computerNameScript = scns.Script;
+                break;
+        }
+    }
+
+    private void SetComputerNameMode(ComputerNameConfigMode mode)
+    {
+        computerNameMode = mode;
+        computerNameError = "";
+        UpdateSettings();
+    }
+
+    private void UpdateSettings()
+    {
+        computerNameError = "";
+
+        try
+        {
+            Config.ComputerNameSettings = computerNameMode switch
+            {
+                ComputerNameConfigMode.Custom when !string.IsNullOrEmpty(computerName) => 
+                    new CustomComputerNameSettings(computerName),
+                ComputerNameConfigMode.Script when !string.IsNullOrEmpty(computerNameScript) => 
+                    new ScriptComputerNameSettings(computerNameScript),
+                _ => new RandomComputerNameSettings()
+            };
+        }
+        catch (ConfigurationException ex)
+        {
+            computerNameError = ex.Message;
+            Config.ComputerNameSettings = new RandomComputerNameSettings();
+        }
+    }
+}

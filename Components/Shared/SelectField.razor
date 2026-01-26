@@ -1,0 +1,60 @@
+@* 下拉选择组件 *@
+@typeparam TValue
+
+<div class="form-group">
+    <label class="form-label">
+        @Label
+        @if (!string.IsNullOrEmpty(Hint))
+        {
+            <span class="form-label-hint">@Hint</span>
+        }
+    </label>
+    <select class="form-control" 
+            value="@Value" 
+            @onchange="OnChange"
+            disabled="@Disabled">
+        @if (ShowEmptyOption)
+        {
+            <option value="">@EmptyOptionText</option>
+        }
+        @ChildContent
+    </select>
+    @if (!string.IsNullOrEmpty(HelpText))
+    {
+        <div class="form-hint">@HelpText</div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Hint { get; set; } = "";
+    [Parameter] public string HelpText { get; set; } = "";
+    [Parameter] public TValue? Value { get; set; }
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool ShowEmptyOption { get; set; } = false;
+    [Parameter] public string EmptyOptionText { get; set; } = "-- 请选择 --";
+
+    private async Task OnChange(ChangeEventArgs e)
+    {
+        if (e.Value is string strValue)
+        {
+            if (typeof(TValue) == typeof(string))
+            {
+                await ValueChanged.InvokeAsync((TValue)(object)strValue);
+            }
+            else if (typeof(TValue).IsEnum)
+            {
+                if (Enum.TryParse(typeof(TValue), strValue, out var enumValue))
+                {
+                    await ValueChanged.InvokeAsync((TValue)enumValue);
+                }
+            }
+            else if (typeof(TValue) == typeof(int) && int.TryParse(strValue, out var intValue))
+            {
+                await ValueChanged.InvokeAsync((TValue)(object)intValue);
+            }
+        }
+    }
+}
