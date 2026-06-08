@@ -1,5 +1,4 @@
-﻿@inherits LayoutComponentBase
-@inject NavigationManager Navigation
+@inherits LayoutComponentBase
 
 <div class="page">
     <aside class="sidebar">
@@ -8,15 +7,18 @@
 
     <div class="main-content">
         <header class="top-bar">
-            <div class="d-flex align-center gap-2">
-                <h4 class="mt-0 mb-0">@Title</h4>
+            <div class="top-bar-title">
+                <div class="top-title">配置工作台</div>
+                <p>生成 Windows 安装应答文件 autounattend.xml</p>
             </div>
-            <div class="d-flex align-center gap-2">
+            <div class="top-bar-actions">
                 <a href="generator/preview" class="btn btn-secondary">
-                    <span>👁️</span> 预览 XML
+                    <AppIcon Name="preview" />
+                    <span>预览 XML</span>
                 </a>
                 <a href="generator/download" class="btn btn-primary">
-                    <span>📥</span> 生成 XML
+                    <AppIcon Name="download" />
+                    <span>生成 XML</span>
                 </a>
             </div>
         </header>
@@ -30,9 +32,5 @@
 <div id="blazor-error-ui" data-nosnippet>
     发生了未处理的错误。
     <a href="." class="reload">重新加载</a>
-    <span class="dismiss">🗙</span>
+    <span class="dismiss">×</span>
 </div>
-
-@code {
-    private string Title { get; set; } = "Windows 无人值守安装生成器";
-}

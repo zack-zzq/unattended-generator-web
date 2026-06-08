@@ -1,55 +1,60 @@
-﻿<div class="sidebar-header">
-    <div class="sidebar-logo">
-        <div class="sidebar-logo-icon">⚙️</div>
-        <span class="sidebar-logo-text">Unattend 生成器</span>
-    </div>
+<div class="sidebar-header">
+    <a class="sidebar-logo" href="" aria-label="返回配置概览">
+        <span class="sidebar-logo-icon">
+            <AppIcon Name="windows" />
+        </span>
+        <span class="sidebar-logo-text">
+            <strong>Windows 无人值守</strong>
+            <small>安装生成器</small>
+        </span>
+    </a>
 </div>
 
-<nav class="sidebar-nav">
+<nav class="sidebar-nav" aria-label="主导航">
     <div class="nav-section">
-        <div class="nav-section-title">主页</div>
+        <div class="nav-section-title">工作台</div>
         <NavLink class="nav-item" href="" Match="NavLinkMatch.All">
-            <span class="nav-item-icon">🏠</span>
+            <span class="nav-item-icon"><AppIcon Name="dashboard" /></span>
             <span>配置概览</span>
         </NavLink>
     </div>
 
     <div class="nav-section">
-        <div class="nav-section-title">基本设置</div>
+        <div class="nav-section-title">系统配置</div>
         <NavLink class="nav-item" href="generator/edition">
-            <span class="nav-item-icon">💿</span>
+            <span class="nav-item-icon"><AppIcon Name="windows" /></span>
             <span>Windows 版本</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/locale">
-            <span class="nav-item-icon">🌐</span>
+            <span class="nav-item-icon"><AppIcon Name="globe" /></span>
             <span>区域和语言</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/timezone">
-            <span class="nav-item-icon">🕐</span>
+            <span class="nav-item-icon"><AppIcon Name="clock" /></span>
             <span>时区设置</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/disk">
-            <span class="nav-item-icon">💾</span>
+            <span class="nav-item-icon"><AppIcon Name="disk" /></span>
             <span>磁盘分区</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/account">
-            <span class="nav-item-icon">👤</span>
+            <span class="nav-item-icon"><AppIcon Name="user" /></span>
             <span>用户账户</span>
         </NavLink>
     </div>
 
     <div class="nav-section">
-        <div class="nav-section-title">个性化</div>
+        <div class="nav-section-title">优化与定制</div>
         <NavLink class="nav-item" href="generator/personalization">
-            <span class="nav-item-icon">🎨</span>
+            <span class="nav-item-icon"><AppIcon Name="palette" /></span>
             <span>外观设置</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/optimization">
-            <span class="nav-item-icon">⚡</span>
+            <span class="nav-item-icon"><AppIcon Name="optimize" /></span>
             <span>系统优化</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/bloatware">
-            <span class="nav-item-icon">🗑️</span>
+            <span class="nav-item-icon"><AppIcon Name="trash" /></span>
             <span>预装软件删除</span>
         </NavLink>
     </div>
@@ -57,11 +62,11 @@
     <div class="nav-section">
         <div class="nav-section-title">网络和安全</div>
         <NavLink class="nav-item" href="generator/wifi">
-            <span class="nav-item-icon">📶</span>
+            <span class="nav-item-icon"><AppIcon Name="wifi" /></span>
             <span>Wi-Fi 配置</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/security">
-            <span class="nav-item-icon">🔐</span>
+            <span class="nav-item-icon"><AppIcon Name="shield" /></span>
             <span>安全设置</span>
         </NavLink>
     </div>
@@ -69,28 +74,29 @@
     <div class="nav-section">
         <div class="nav-section-title">高级设置</div>
         <NavLink class="nav-item" href="generator/script">
-            <span class="nav-item-icon">📜</span>
+            <span class="nav-item-icon"><AppIcon Name="script" /></span>
             <span>自定义脚本</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/advanced">
-            <span class="nav-item-icon">🔧</span>
+            <span class="nav-item-icon"><AppIcon Name="advanced" /></span>
             <span>高级选项</span>
         </NavLink>
     </div>
 
     <div class="nav-section">
-        <div class="nav-section-title">生成</div>
+        <div class="nav-section-title">工具和输出</div>
         <NavLink class="nav-item" href="generator/preview">
-            <span class="nav-item-icon">👁️</span>
-            <span>预览配置</span>
+            <span class="nav-item-icon"><AppIcon Name="preview" /></span>
+            <span>预览 XML</span>
         </NavLink>
         <NavLink class="nav-item" href="generator/download">
-            <span class="nav-item-icon">📥</span>
-            <span>下载 XML</span>
+            <span class="nav-item-icon"><AppIcon Name="download" /></span>
+            <span>生成 XML</span>
         </NavLink>
     </div>
 </nav>
 
-<style>
-    /* 导航活动状态样式已在全局CSS中定义 */
-</style>
+<div class="sidebar-footer">
+    <span class="status-dot"></span>
+    <span>本地生成，不上传配置</span>
+</div>

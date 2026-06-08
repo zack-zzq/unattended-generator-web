@@ -1,0 +1,50 @@
+name: Update Generator Library
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-library:
+    name: Update Library/UnattendGenerator
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Update generator submodule
+        run: |
+          git submodule update --init --recursive
+          git submodule update --remote --merge Library/UnattendGenerator
+          git status --short
+
+      - name: Restore dependencies
+        run: dotnet restore unattended-generator-web.csproj -r browser-wasm
+
+      - name: Build
+        run: dotnet build unattended-generator-web.csproj --configuration Release --no-restore
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: automation/update-generator-library
+          delete-branch: true
+          title: Update generator library
+          commit-message: Update generator library submodule
+          body: |
+            Automated update for `Library/UnattendGenerator`.
+
+            The workflow updates the submodule to the latest upstream commit and verifies the web project with a Release build.

@@ -1,22 +1,22 @@
-@* 可折叠卡片组件 *@
-
-<div class="card @(Collapsed ? "collapsed" : "") @CssClass">
-    <div class="card-header" @onclick="Toggle">
-        <h3 class="card-title">
+<section class="card @(Collapsed ? "collapsed" : "") @CssClass">
+    <button class="card-header" type="button" @onclick="Toggle" aria-expanded="@(!Collapsed)">
+        <span class="card-title">
             @if (!string.IsNullOrEmpty(Icon))
             {
-                <div class="card-title-icon">@Icon</div>
+                <span class="card-title-icon">
+                    <AppIcon Name="@Icon" />
+                </span>
             }
-            @Title
-        </h3>
-        <div class="card-toggle @(Collapsed ? "collapsed" : "")">
-            ▼
-        </div>
-    </div>
+            <span>@Title</span>
+        </span>
+        <span class="card-toggle @(Collapsed ? "collapsed" : "")">
+            <AppIcon Name="chevron-down" />
+        </span>
+    </button>
     <div class="card-body @(Collapsed ? "collapsed" : "")">
         @ChildContent
     </div>
-</div>
+</section>
 
 @code {
     [Parameter] public string Title { get; set; } = "";
@@ -24,11 +24,11 @@
     [Parameter] public bool Collapsed { get; set; } = false;
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public EventCallback<bool> CollapsedChanged { get; set; }
-    [Parameter(CaptureUnmatchedValues = true)] 
+    [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? AdditionalAttributes { get; set; }
 
-    private string CssClass => AdditionalAttributes?.TryGetValue("class", out var cssClass) == true 
-        ? cssClass?.ToString() ?? "" 
+    private string CssClass => AdditionalAttributes?.TryGetValue("class", out var cssClass) == true
+        ? cssClass?.ToString() ?? ""
         : "";
 
     private async Task Toggle()
@@ -37,4 +37,3 @@
         await CollapsedChanged.InvokeAsync(Collapsed);
     }
 }
-

@@ -1,122 +1,190 @@
-﻿@page "/"
+@page "/"
 @using unattended_generator_web.Services
 @inject ConfigurationService Config
 
 <PageTitle>配置概览 - Windows 无人值守安装生成器</PageTitle>
 
-<div class="animate-fade-in">
-    <div class="mb-3">
-        <h1>配置概览</h1>
-        <p>快速配置您的 Windows 无人值守安装选项，生成 autounattend.xml 文件。</p>
-    </div>
-
-    <div class="alert alert-info">
-        <span>💡</span>
-        <span>从左侧菜单选择配置选项，或点击下方快速入口开始配置。</span>
-    </div>
-
-    <!-- 快速配置区域 -->
-    <div class="option-grid">
-        <a href="generator/edition" class="option-item">
-            <div class="list-item-icon">💿</div>
-            <div class="list-item-text">
-                <div class="list-item-title">Windows 版本</div>
-                <div class="list-item-subtitle">选择要安装的 Windows 版本</div>
+<div class="dashboard-shell animate-fade-in">
+    <section class="dashboard-grid">
+        <div class="hero-panel">
+            <div>
+                <h1>配置概览</h1>
+                <p>在左侧导航中配置 Windows 安装选项，实时生成可用于安装介质根目录的 autounattend.xml 文件。</p>
             </div>
-        </a>
-        <a href="generator/locale" class="option-item">
-            <div class="list-item-icon">🌐</div>
-            <div class="list-item-text">
-                <div class="list-item-title">区域和语言</div>
-                <div class="list-item-subtitle">设置系统语言和键盘布局</div>
-            </div>
-        </a>
-        <a href="generator/account" class="option-item">
-            <div class="list-item-icon">👤</div>
-            <div class="list-item-text">
-                <div class="list-item-title">用户账户</div>
-                <div class="list-item-subtitle">配置本地管理员账户</div>
-            </div>
-        </a>
-        <a href="generator/disk" class="option-item">
-            <div class="list-item-icon">💾</div>
-            <div class="list-item-text">
-                <div class="list-item-title">磁盘分区</div>
-                <div class="list-item-subtitle">配置磁盘分区方案</div>
-            </div>
-        </a>
-        <a href="generator/optimization" class="option-item">
-            <div class="list-item-icon">⚡</div>
-            <div class="list-item-text">
-                <div class="list-item-title">系统优化</div>
-                <div class="list-item-subtitle">禁用遥测、优化性能</div>
-            </div>
-        </a>
-        <a href="generator/bloatware" class="option-item">
-            <div class="list-item-icon">🗑️</div>
-            <div class="list-item-text">
-                <div class="list-item-title">预装软件删除</div>
-                <div class="list-item-subtitle">移除 Windows 预装应用</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- 当前配置摘要 -->
-    <Card Title="当前配置摘要" Icon="📋" class="mt-3">
-        <div class="list">
-            <div class="list-item">
-                <div class="list-item-content">
-                    <span>Windows 版本</span>
-                </div>
-                <span class="badge">@GetEditionDisplay()</span>
-            </div>
-            <div class="list-item">
-                <div class="list-item-content">
-                    <span>语言设置</span>
-                </div>
-                <span class="badge">@GetLanguageDisplay()</span>
-            </div>
-            <div class="list-item">
-                <div class="list-item-content">
-                    <span>账户模式</span>
-                </div>
-                <span class="badge">@GetAccountDisplay()</span>
-            </div>
-            <div class="list-item">
-                <div class="list-item-content">
-                    <span>磁盘分区</span>
-                </div>
-                <span class="badge">@GetPartitionDisplay()</span>
-            </div>
-            <div class="list-item">
-                <div class="list-item-content">
-                    <span>已选择删除的预装软件</span>
-                </div>
-                <span class="badge">@Config.SelectedBloatwares.Count 项</span>
+            <div class="hero-actions">
+                <a href="generator/preview" class="btn btn-primary btn-lg">
+                    <AppIcon Name="preview" />
+                    <span>预览 XML</span>
+                </a>
+                <a href="generator/download" class="btn btn-secondary btn-lg">
+                    <AppIcon Name="download" />
+                    <span>生成 XML</span>
+                </a>
             </div>
         </div>
-    </Card>
 
-    <!-- 生成按钮 -->
-    <div class="d-flex justify-center gap-2 mt-3">
-        <a href="generator/preview" class="btn btn-secondary btn-lg">
-            <span>👁️</span>
-            预览配置
-        </a>
-        <a href="generator/download" class="btn btn-primary btn-lg">
-            <span>📥</span>
-            生成并下载 XML
-        </a>
-    </div>
+        <div class="progress-panel">
+            <div class="panel-heading">
+                <span>配置进度</span>
+                <strong>@ProgressPercent%</strong>
+            </div>
+            <div class="progress-count">
+                <span>@ConfiguredSteps</span>
+                <small>/ @TotalSteps 已明确配置</small>
+            </div>
+            <div class="progress-track" aria-label="配置进度">
+                <span style="width: @ProgressPercent%;"></span>
+            </div>
+            <p class="progress-note">
+                @ProgressNote
+            </p>
+        </div>
+    </section>
+
+    <section class="dashboard-content">
+        <div class="dashboard-main">
+            <section class="surface-panel">
+                <div class="section-heading">
+                    <h2>快速入口</h2>
+                    <p>按常用配置顺序进入各个模块。</p>
+                </div>
+
+                <div class="quick-grid">
+                    @foreach (var item in QuickLinks)
+                    {
+                        <a href="@item.Href" class="quick-card">
+                            <span class="quick-card-icon">
+                                <AppIcon Name="@item.Icon" />
+                            </span>
+                            <span>
+                                <strong>@item.Title</strong>
+                                <small>@item.Description</small>
+                            </span>
+                            <AppIcon Name="chevron-right" Class="quick-card-arrow" />
+                        </a>
+                    }
+                </div>
+            </section>
+
+            <section class="surface-panel xml-panel">
+                <div class="section-heading">
+                    <h2>生成的 XML 预览</h2>
+                    <p>展示当前配置生成内容的前几行，完整内容可在预览页查看。</p>
+                </div>
+                <div class="code-window">
+                    <div class="code-window-bar">
+                        <span>autounattend.xml</span>
+                        <a href="generator/preview" class="icon-button" aria-label="打开完整 XML 预览">
+                            <AppIcon Name="preview" />
+                        </a>
+                    </div>
+                    <pre class="code-preview compact"><code>@string.Join(Environment.NewLine, XmlPreviewLines)</code></pre>
+                </div>
+            </section>
+        </div>
+
+        <aside class="summary-panel">
+            <div class="section-heading">
+                <h2>当前配置</h2>
+                <p>关键选项的当前状态。</p>
+            </div>
+            <div class="summary-list">
+                @foreach (var item in SummaryRows)
+                {
+                    <a href="@item.Href" class="summary-row">
+                        <span class="summary-row-icon">
+                            <AppIcon Name="@item.Icon" />
+                        </span>
+                        <span class="summary-row-content">
+                            <strong>@item.Title</strong>
+                            <small>@item.Value</small>
+                        </span>
+                        <AppIcon Name="chevron-right" Class="summary-row-arrow" />
+                    </a>
+                }
+            </div>
+        </aside>
+    </section>
 </div>
 
 @code {
+    private const int TotalSteps = 8;
+
+    private int ConfiguredSteps => ConfigurationChecks.Count(item => item.IsConfigured);
+
+    private int ProgressPercent => Math.Clamp((int)Math.Round(ConfiguredSteps * 100m / TotalSteps), 0, 100);
+
+    private string ProgressNote => ConfiguredSteps switch
+    {
+        0 => "可以先从 Windows 版本、区域和语言、磁盘分区开始。",
+        < TotalSteps => "继续完善关键区域后，再预览和生成 XML。",
+        _ => "关键区域都已经明确配置，可以生成 XML。"
+    };
+
+    private IReadOnlyList<DashboardLink> QuickLinks =>
+    [
+        new("Windows 版本", "选择版本、密钥和镜像来源", "windows", "generator/edition"),
+        new("区域和语言", "设置语言、区域和键盘布局", "globe", "generator/locale"),
+        new("用户账户", "配置本地账户和自动登录", "user", "generator/account"),
+        new("磁盘分区", "设置 GPT/MBR 和分区模式", "disk", "generator/disk"),
+        new("系统优化", "调整隐私、性能和界面选项", "optimize", "generator/optimization"),
+        new("预装软件删除", "选择需要移除的组件", "trash", "generator/bloatware"),
+        new("安全设置", "配置 Defender、UAC 和策略", "shield", "generator/security"),
+        new("自定义脚本", "添加安装阶段执行脚本", "script", "generator/script")
+    ];
+
+    private IReadOnlyList<SummaryItem> SummaryRows =>
+    [
+        new("Windows 版本", GetEditionDisplay(), "windows", "generator/edition"),
+        new("区域和语言", GetLanguageDisplay(), "globe", "generator/locale"),
+        new("用户账户", GetAccountDisplay(), "user", "generator/account"),
+        new("磁盘分区", GetPartitionDisplay(), "disk", "generator/disk"),
+        new("系统优化", $"{GetOptimizationCount()} 项已启用", "optimize", "generator/optimization"),
+        new("预装软件删除", $"{Config.SelectedBloatwares.Count} 项已选择", "trash", "generator/bloatware"),
+        new("安全策略", GetSecurityDisplay(), "shield", "generator/security"),
+        new("自定义脚本", $"{Config.ScriptSettings.Scripts.Count()} 个脚本", "script", "generator/script")
+    ];
+
+    private IReadOnlyList<ConfigurationCheck> ConfigurationChecks =>
+    [
+        new(Config.EditionSettings is not InteractiveEditionSettings),
+        new(Config.LanguageSettings is UnattendedLanguageSettings),
+        new(Config.AccountSettings is UnattendedAccountSettings or InteractiveMicrosoftAccountSettings),
+        new(Config.PartitionSettings is not InteractivePartitionSettings),
+        new(GetOptimizationCount() > 0),
+        new(Config.SelectedBloatwares.Count > 0),
+        new(IsSecurityConfigured()),
+        new(Config.ScriptSettings.Scripts.Any())
+    ];
+
+    private IReadOnlyList<string> XmlPreviewLines => GetXmlPreviewLines();
+
+    private IReadOnlyList<string> GetXmlPreviewLines()
+    {
+        try
+        {
+            return Config.GenerateXml()
+                .Replace("\r\n", "\n")
+                .Split('\n')
+                .Take(12)
+                .ToArray();
+        }
+        catch (ConfigurationException ex)
+        {
+            return [$"生成失败: {ex.Message}"];
+        }
+        catch (Exception ex)
+        {
+            return [$"生成时发生错误: {ex.Message}"];
+        }
+    }
+
     private string GetEditionDisplay()
     {
         return Config.EditionSettings switch
         {
             Schneegans.Unattend.UnattendedEditionSettings s => s.Edition.DisplayName,
-            Schneegans.Unattend.CustomEditionSettings s => "自定义密钥",
+            Schneegans.Unattend.CustomEditionSettings => "自定义密钥",
             Schneegans.Unattend.FirmwareEditionSettings => "从固件读取",
             _ => "交互式选择"
         };
@@ -151,4 +219,66 @@
             _ => "交互式选择"
         };
     }
+
+    private string GetSecurityDisplay()
+    {
+        if (!IsSecurityConfigured())
+        {
+            return "默认策略";
+        }
+
+        return "已调整安全策略";
+    }
+
+    private bool IsSecurityConfigured()
+    {
+        return Config.DisableDefender
+            || Config.DisableSac
+            || Config.DisableSmartScreen
+            || Config.DisableUac
+            || Config.WdacSettings is not SkipWdacSettings
+            || Config.LockoutSettings is not DefaultLockoutSettings
+            || Config.PasswordExpirationSettings is not DefaultPasswordExpirationSettings;
+    }
+
+    private int GetOptimizationCount()
+    {
+        var flags = new[]
+        {
+            Config.ShowFileExtensions,
+            Config.DisableWindowsUpdate,
+            Config.ShowAllTrayIcons,
+            Config.HideTaskViewButton,
+            Config.EnableLongPaths,
+            Config.EnableRemoteDesktop,
+            Config.HardenSystemDriveAcl,
+            Config.AllowPowerShellScripts,
+            Config.DisableLastAccess,
+            Config.PreventAutomaticReboot,
+            Config.DisableFastStartup,
+            Config.DisableSystemRestore,
+            Config.DisableWidgets,
+            Config.TurnOffSystemSounds,
+            Config.DisableAppSuggestions,
+            Config.PreventDeviceEncryption,
+            Config.ClassicContextMenu,
+            Config.LeftTaskbar,
+            Config.HideEdgeFre,
+            Config.DisableEdgeStartupBoost,
+            Config.MakeEdgeUninstallable,
+            Config.LaunchToThisPC,
+            Config.DeleteWindowsOld,
+            Config.DisablePointerPrecision,
+            Config.DisableBingResults,
+            Config.DeleteJunctions,
+            Config.DeleteEdgeDesktopIcon,
+            Config.ShowEndTask
+        };
+
+        return flags.Count(value => value);
+    }
+
+    private sealed record DashboardLink(string Title, string Description, string Icon, string Href);
+    private sealed record SummaryItem(string Title, string Value, string Icon, string Href);
+    private sealed record ConfigurationCheck(bool IsConfigured);
 }
