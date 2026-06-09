@@ -39,11 +39,7 @@ jobs:
       - name: Publish
         run: dotnet publish unattended-generator-web.csproj -c Release -f net9.0 -o release
 
-      # 更新base href以匹配GitHub Pages路径
-      - name: Update base href
-        run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          sed -i 's|<base href="/" />|<base href="/'$REPO_NAME'/" />|g' release/wwwroot/index.html
+      # 自定义域名部署在站点根路径，index.html 保持 <base href="/" />
 
       # 添加.nojekyll文件以禁用Jekyll处理
       - name: Add .nojekyll
